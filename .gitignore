@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.db
+*.sqlite3
+*.jsonl
+.env
+.vscode/
+.pytest_cache/
+.stoa_backups/
+stoa_memory_db/
+logs/
+node_modules/
+dist/
+build/

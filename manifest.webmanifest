@@ -1,0 +1,27 @@
+{
+  "id": "/",
+  "name": "STOA Mobile",
+  "short_name": "STOA",
+  "description": "Interface mobile-first do STOA com chat, objetivo ativo, previews e operações.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#071019",
+  "theme_color": "#071019",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

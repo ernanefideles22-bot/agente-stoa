@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#071019">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="STOA">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="application-name" content="STOA">
+  <title>STOA Mobile</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png">
+  <style>
+    body{margin:0;background:#071019;color:#eef7fb;font-family:Segoe UI,sans-serif}
+    .wrap{max-width:760px;margin:0 auto;padding:16px 14px 120px;display:grid;gap:14px}
+    .hero,.card,.composer{background:#0c1824;border:1px solid rgba(126,224,255,.14);border-radius:22px;box-shadow:0 20px 40px rgba(0,0,0,.24)}
+    .hero{padding:18px;min-height:180px;background:linear-gradient(180deg,rgba(8,16,24,.3),rgba(8,16,24,.92)),url('https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat}
+    .hero h1{margin:0 0 8px;font-size:2rem}
+    .muted{color:#9fb4c0}
+    .pill{display:inline-block;margin:8px 8px 0 0;padding:8px 12px;border-radius:999px;background:#08111b;border:1px solid rgba(255,255,255,.08);font-size:.8rem}
+    .pill.warning{border-color:rgba(255,196,112,.35);color:#ffe0a6}
+    .pill.soft-invalid{border-color:rgba(255,152,99,.35);color:#ffd1b8}
+    .pill.hard-invalid{border-color:rgba(255,107,107,.35);color:#ffd7d7}
+    .card{padding:16px;display:grid;gap:12px}
+    .title{font-weight:700;font-size:1rem}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .metric,.step,.diff,.msg{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:12px}
+    .label{font-size:.74rem;color:#9fb4c0;text-transform:uppercase}
+    .value{margin-top:4px;font-weight:700;word-break:break-word}
+    .step{display:grid;gap:6px}
+    .top{display:flex;justify-content:space-between;gap:8px}
+    .status{font-size:.72rem;padding:5px 10px;border-radius:999px;background:rgba(126,224,255,.12)}
+    .actions{display:flex;flex-wrap:wrap;gap:10px}
+    button{border:0;border-radius:14px;padding:12px 14px;font:inherit;cursor:pointer}
+    input,select{background:rgba(255,255,255,.06);color:#eef7fb;border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px 14px;font:inherit}
+    .primary{background:linear-gradient(135deg,#7ee0ff,#45b8ff);color:#041018;font-weight:800}
+    .secondary{background:rgba(255,255,255,.06);color:#eef7fb;border:1px solid rgba(255,255,255,.08)}
+    .msgs{display:grid;gap:10px}
+    .user{background:rgba(69,184,255,.14)}
+    .meta{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:#9fb4c0;text-transform:uppercase}
+    pre{white-space:pre-wrap;word-break:break-word;font-family:Consolas,monospace;font-size:.78rem;color:#d9ebf4}
+    .composer{position:sticky;bottom:14px;padding:12px;display:grid;gap:10px}
+    textarea{width:100%;min-height:92px;resize:vertical;background:transparent;color:#eef7fb;border:0;outline:none;font:inherit}
+    .banner{padding:10px 12px;border-radius:14px;background:rgba(255,196,112,.12);border:1px solid rgba(255,196,112,.18);color:#ffe0a6;display:none}
+    .banner.show{display:block}
+    .banner.error{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.2);color:#ffd7d7}
+    .banner.info{background:rgba(126,224,255,.08);border-color:rgba(126,224,255,.18);color:#cdeef8}
+    .voice-status{padding:10px 12px;border-radius:14px;background:rgba(126,224,255,.08);border:1px solid rgba(126,224,255,.18);color:#cdeef8;display:none}
+    .voice-status.show{display:block}
+    .voice-status.error{background:rgba(255,107,107,.12);border-color:rgba(255,107,107,.25);color:#ffd7d7}
+    .voice-status.listening{background:rgba(126,224,255,.14);border-color:rgba(126,224,255,.3)}
+    .voice-status.processing{background:rgba(255,196,112,.12);border-color:rgba(255,196,112,.22);color:#ffe0a6}
+    .secondary.active-voice{background:rgba(126,224,255,.18);border-color:rgba(126,224,255,.36)}
+    #voice{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;padding:0}
+    #voice svg{pointer-events:none}
+    .secondary[disabled]{opacity:.55;cursor:not-allowed}
+    .timeline{display:grid;gap:10px}
+    .timeline-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:12px}
+    .timeline-arrow{color:#7ee0ff;font-weight:700}
+    .sev-ok{color:#9fe2b0}
+    .sev-warning{color:#ffe0a6}
+    .sev-soft-invalid{color:#ffd1b8}
+    .sev-hard-invalid{color:#ffd7d7}
+    #pin-screen{position:fixed;inset:0;z-index:9999;background:#071019;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:32px}
+    #pin-screen h2{margin:0;font-size:1.6rem;color:#eef7fb}
+    #pin-screen .muted{text-align:center;max-width:320px}
+    #pin-dots{display:flex;gap:12px}
+    .pin-dot{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.12);transition:background .15s}
+    .pin-dot.filled{background:#7ee0ff}
+    #pin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:240px}
+    .pin-key{background:#0c1824;border:1px solid rgba(126,224,255,.14);border-radius:18px;padding:18px;font-size:1.4rem;font-weight:700;color:#eef7fb;cursor:pointer;text-align:center;-webkit-tap-highlight-color:transparent}
+    .pin-key:active{background:rgba(126,224,255,.16)}
+    #pin-error{color:#ffa0a0;font-size:.85rem;min-height:1.2em}
+    #pin-setup{background:#0c1824;border:1px solid rgba(126,224,255,.14);border-radius:22px;padding:24px;width:100%;max-width:360px;display:grid;gap:14px}
+    #pin-setup input{width:100%;box-sizing:border-box}
+    .typing-indicator{display:inline-flex;gap:5px;align-items:center;padding:4px 0}
+
+    /* --- STOA Futurista --- */
+    .stoa-card{position:relative;overflow:hidden;border:1px solid rgba(80, 240, 255, .35);border-radius:24px;background:linear-gradient(160deg, rgba(4,14,26,.95), rgba(5,20,39,.88));box-shadow:0 0 18px rgba(33,219,255,.25), inset 0 0 12px rgba(129,222,255,.25)}
+    .stoa-card::before{content:'';position:absolute;inset:-30px;background:radial-gradient(circle at 80% 20%,rgba(32,244,255,.55),transparent 36%),radial-gradient(circle at 20% 80%,rgba(175,144,255,.32),transparent 38%);mix-blend-mode:screen;opacity:.9;pointer-events:none;animation:stoaGlow 6s ease-in-out infinite}
+    .stoa-card::after{content:'STOA CONTROL';position:absolute;left:12px;top:12px;font-size:.72rem;font-weight:900;letter-spacing:1px;color:rgba(33,234,255,.5);text-shadow:0 0 15px rgba(0,255,255,.75);z-index:1}
+    .stoa-inner{position:relative;z-index:2;padding:16px;display:grid;gap:12px}
+    .stoa-metric{background:rgba(255,255,255,.04);border:1px solid rgba(84,240,255,.2);border-radius:12px;padding:12px;display:grid;gap:5px}
+    .stoa-metric .label{color:#83f0ff;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+    .stoa-metric .value{font-size:1.1rem;font-weight:900;color:#d4f7ff}
+    .stoa-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .stoa-btn{background:linear-gradient(135deg,#2ee2ff,#2a8cff);color:#fff;font-weight:800;border:none;border-radius:12px;padding:10px 12px;cursor:pointer;box-shadow:0 8px 20px rgba(46,226,255,.3),0 0 0 1px rgba(255,255,255,.12);transition:transform .2s ease,box-shadow .2s ease}
+    .stoa-btn:hover{transform:translateY(-1px);box-shadow:0 12px 25px rgba(46,226,255,.45),0 0 0 1px rgba(255,255,255,.22)}
+    .stoa-btn.active{background:linear-gradient(135deg,#57ffb2,#8ac8ff);color:#051a2a}
+    .stoa-progress{height:8px;width:100%;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+    .stoa-progress>div{height:100%;border-radius:999px;background:linear-gradient(90deg,#26faff,#4f8eff)}
+    @keyframes stoaGlow{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(8px, -8px) scale(1.02)}}
+    .typing-indicator span{width:7px;height:7px;border-radius:50%;background:#7ee0ff;animation:bounce .9s infinite}
+    .typing-indicator span:nth-child(2){animation-delay:.15s}
+    .typing-indicator span:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+    .voice-wave{display:none;gap:3px;align-items:center;justify-content:center;height:28px}
+    .voice-wave.show{display:flex}
+    .voice-wave span{width:3px;border-radius:3px;background:#7ee0ff;animation:wave .8s ease-in-out infinite}
+    .voice-wave span:nth-child(1){height:8px;animation-delay:0s}
+    .voice-wave span:nth-child(2){height:16px;animation-delay:.1s}
+    .voice-wave span:nth-child(3){height:24px;animation-delay:.2s}
+    .voice-wave span:nth-child(4){height:16px;animation-delay:.3s}
+    .voice-wave span:nth-child(5){height:8px;animation-delay:.4s}
+    @keyframes wave{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.6)}}
+    .mem-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start}
+    .mem-item .cat{font-size:.7rem;padding:3px 8px;border-radius:999px;background:rgba(126,224,255,.12);color:#7ee0ff;white-space:nowrap}
+    .mem-item .mem-text{flex:1;font-size:.82rem;word-break:break-word}
+    .mem-item button{background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.2);color:#ffd7d7;border-radius:10px;padding:4px 10px;font-size:.75rem;cursor:pointer}
+  </style>
+</head>
+<body>
+  <!-- PIN Screen -->
+  <div id="pin-screen">
+    <h2>STOA</h2>
+    <p class="muted" id="pin-label">Digite seu PIN</p>
+    <div id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div id="pin-grid">
+      <button class="pin-key" data-k="1">1</button>
+      <button class="pin-key" data-k="2">2</button>
+      <button class="pin-key" data-k="3">3</button>
+      <button class="pin-key" data-k="4">4</button>
+      <button class="pin-key" data-k="5">5</button>
+      <button class="pin-key" data-k="6">6</button>
+      <button class="pin-key" data-k="7">7</button>
+      <button class="pin-key" data-k="8">8</button>
+      <button class="pin-key" data-k="9">9</button>
+      <button class="pin-key" data-k="clear" style="font-size:.9rem">Apagar</button>
+      <button class="pin-key" data-k="0">0</button>
+      <button class="pin-key" data-k="ok" style="font-size:.9rem">OK</button>
+    </div>
+    <div id="pin-error"></div>
+    <div id="pin-setup" style="display:none">
+      <div class="title">Primeiro acesso</div>
+      <p class="muted">Cole o STOA_TOKEN do seu <code>.env</code> e defina um PIN de 4 dígitos.</p>
+      <input type="text" id="setup-token" placeholder="STOA_TOKEN (do .env)" autocomplete="off" />
+      <input type="password" id="setup-pin" placeholder="PIN de 4 dígitos" maxlength="4" inputmode="numeric" />
+      <button class="primary" onclick="saveSetup()">Salvar e entrar</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <section class="hero">
+      <div class="muted">STOA Visual Assistant</div>
+      <h1>STOA no celular</h1>
+      <div>Converse com o agente, veja o objetivo ativo e aplique previews direto no navegador.</div>
+      <div>
+        <span class="pill" id="hero-mode">Modo: idle</span>
+        <span class="pill" id="hero-status">Status: idle</span>
+        <span class="pill" id="hero-phase">Fase: idle</span>
+        <span class="pill" id="hero-op">Operation: -</span>
+      </div>
+    </section>
+
+    <section class="card stoa-card" id="stoa-dashboard">
+      <div class="stoa-inner">
+        <div class="top">
+          <div>
+            <div class="title" style="color:#7df2ff">STOA Ultimate Dashboard</div>
+            <small class="muted">Modo futuro: invisível ao mundo humano. ZEUS é referência.</small>
+          </div>
+          <div class="status" id="stoa-status">inativo</div>
+        </div>
+
+        <div class="grid">
+          <div class="stoa-metric"><div class="label">Nível</div><div class="value" id="stoa-level">Basic</div></div>
+          <div class="stoa-metric"><div class="label">Energia</div><div class="value" id="stoa-energy">100%</div></div>
+          <div class="stoa-metric"><div class="label">Latência</div><div class="value" id="stoa-latency">-</div></div>
+          <div class="stoa-metric"><div class="label">Funções ativas</div><div class="value" id="stoa-functions">0/99</div></div>
+        </div>
+
+        <div class="stoa-progress"><div id="stoa-progress-bar" style="width:100%"></div></div>
+
+        <div class="stoa-actions">
+          <button class="stoa-btn" id="stoa-toggle">Ativar STOA</button>
+          <button class="stoa-btn" id="stoa-psych">Modo Psicólogo</button>
+          <button class="stoa-btn" id="stoa-plan">Modo Estratégico</button>
+          <button class="stoa-btn" id="stoa-release">99 Funções</button>
+        </div>
+
+        <div class="stoa-actions">
+          <input id="stoa-goal-input" placeholder="Digite novo objetivo" style="border-radius:12px;padding:8px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.22);color:#eef7fb;width:100%;box-sizing:border-box" />
+          <button class="stoa-btn" id="stoa-goal-set">Definir Objetivo</button>
+        </div>
+
+        <div id="stoa-widget-msg" class="muted">Pronto para revolucionar.</div>
+      </div>
+    </section>
+
+    <section class="banner" id="offline-banner">Modo offline: a interface shell está carregada do cache. As chamadas à API podem falhar até a rede voltar.</section>
+
+    <section class="banner" id="pwa-banner"></section>
+
+    <section class="banner" id="network-banner"></section>
+
+    <section class="card">
+      <div class="title">Objetivo ativo</div>
+      <div class="grid">
+        <div class="metric"><div class="label">Título</div><div class="value" id="goal-title">Nenhum objetivo ativo</div></div>
+        <div class="metric"><div class="label">Status</div><div class="value" id="goal-status">-</div></div>
+      </div>
+      <div id="goal-steps"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Próximo passo</div>
+      <div id="guidance-msg">Peça: o que eu faço agora?</div>
+      <div id="next-step"></div>
+      <div id="blockers"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Preview pendente</div>
+      <div class="grid">
+        <div class="metric"><div class="label">Preview ID</div><div class="value" id="preview-id">-</div></div>
+        <div class="metric"><div class="label">Arquivos</div><div class="value" id="preview-files">-</div></div>
+      </div>
+      <div class="grid">
+        <div class="metric"><div class="label">Validade</div><div class="value" id="preview-validity">-</div></div>
+        <div class="metric"><div class="label">Próximo destravamento</div><div class="value" id="next-unlock">-</div></div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="apply">Aplicar</button>
+        <button class="secondary" id="cancel">Cancelar</button>
+      </div>
+      <div id="diffs"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Governança operacional</div>
+      <div class="grid">
+        <div class="metric"><div class="label">Fase</div><div class="value" id="phase-label">-</div></div>
+        <div class="metric"><div class="label">Risco</div><div class="value" id="risk-level">-</div></div>
+      </div>
+      <div id="operational-message" class="step">Sem explicação operacional ainda.</div>
+      <div id="governance-notes"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Timeline operacional</div>
+      <div class="actions">
+        <select class="secondary" id="timeline-visibility">
+          <option value="">Todas visibilidades</option>
+          <option value="primary">Primary</option>
+          <option value="secondary">Secondary</option>
+          <option value="collapsed">Collapsed</option>
+        </select>
+        <select class="secondary" id="timeline-severity">
+          <option value="">Todas severidades</option>
+          <option value="info">Info</option>
+          <option value="warning">Warning</option>
+          <option value="error">Error</option>
+        </select>
+        <select class="secondary" id="timeline-phase">
+          <option value="">Todas fases</option>
+          <option value="awaiting_preview">Awaiting preview</option>
+          <option value="awaiting_confirmation">Awaiting confirmation</option>
+          <option value="applying_preview">Applying preview</option>
+          <option value="executing_changes">Executing changes</option>
+          <option value="validating_changes">Validating changes</option>
+          <option value="ready_to_complete">Ready to complete</option>
+          <option value="blocked">Blocked</option>
+          <option value="planning">Planning</option>
+        </select>
+        <button class="secondary" id="timeline-refresh">Atualizar timeline</button>
+      </div>
+      <div id="trajectory-summary" class="step">Sem resumo operacional persistente ainda.</div>
+      <div id="timeline-summary" class="step">Sem eventos persistentes consultados ainda.</div>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Operações</div>
+      <div class="actions">
+        <button class="secondary" id="ops-history">Últimas operações</button>
+        <button class="secondary" id="ops-health">Saúde operacional</button>
+      </div>
+    </section>
+
+      <section class="card">
+        <div class="title">Device Control</div>
+        <div class="actions">
+          <button class="secondary" id="devices-refresh">Atualizar dispositivos</button>
+          <button class="secondary" id="device-confirm-last">Confirmar última ação sensível</button>
+          <button class="secondary" id="device-cancel-last">Cancelar última ação sensível</button>
+        </div>
+      <div class="grid">
+        <div class="metric"><div class="label">Dispositivos</div><div class="value" id="devices-count">0</div></div>
+        <div class="metric"><div class="label">Última ação</div><div class="value" id="device-last-action">-</div></div>
+      </div>
+      <div class="actions">
+        <select id="device-target"></select>
+        <select id="device-action-type">
+          <option value="open_app">open_app</option>
+          <option value="open_url">open_url</option>
+          <option value="run_shell_command">run_shell_command</option>
+          <option value="take_screenshot">take_screenshot</option>
+          <option value="close_app">close_app</option>
+          <option value="media_control">media_control</option>
+          <option value="vscode_open">vscode_open</option>
+          <option value="send_whatsapp">send_whatsapp</option>
+        </select>
+      </div>
+      <input id="device-command" placeholder="Target da ação: URL, app, comando ou deixe vazio para screenshot">
+      <label class="muted"><input type="checkbox" id="device-confirm"> Confirmo se esta ação for sensível</label>
+      <div class="actions">
+        <button class="primary" id="device-send">Enviar ao dispositivo</button>
+      </div>
+      <div id="devices-list"></div>
+      <div id="device-result" class="step">Sem ação de dispositivo enviada ainda.</div>
+    </section>
+
+    <section class="card">
+      <div class="title">Chat</div>
+      <div class="msgs" id="messages"></div>
+    </section>
+
+    <section class="card">
+      <div class="title">Memória do STOA</div>
+      <div class="actions">
+        <button class="secondary" id="mem-refresh">Atualizar</button>
+        <button class="secondary" id="mem-push">Ativar notificações</button>
+      </div>
+      <div class="grid">
+        <div class="metric"><div class="label">Episódica</div><div class="value" id="mem-stat-episodic">-</div></div>
+        <div class="metric"><div class="label">Semântica</div><div class="value" id="mem-stat-semantic">-</div></div>
+      </div>
+      <div id="mem-list" style="display:grid;gap:8px;margin-top:8px"></div>
+    </section>
+
+    <section class="composer">
+      <div class="voice-status" id="voice-status"></div>
+      <textarea id="command" placeholder="Digite seu comando para o STOA"></textarea>
+      <div class="actions">
+        <button class="secondary" id="voice" aria-label="Microfone">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="Microfone">
+  <rect x="9" y="2" width="6" height="11" rx="3"/>
+  <path d="M5 10a7 7 0 0 0 14 0"/>
+  <line x1="12" y1="19" x2="12" y2="22"/>
+  <line x1="8" y1="22" x2="16" y2="22"/>
+</svg>
+          <div class="voice-wave" id="voice-wave"><span></span><span></span><span></span><span></span><span></span></div>
+        </button>
+        <button class="secondary" id="next-action">O que eu faço agora?</button>
+        <button class="secondary" id="preview-now">Criar Preview</button>
+        <button class="primary" id="send">Enviar</button>
+      </div>
+    </section>
+  </div>
+  <script>
+    const $=id=>document.getElementById(id);
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const VOICE_BUTTON_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>`;
+    // ── Auth: PIN + Token ────────────────────────────────────────────────────
+    const AUTH = {
+      get token() { return localStorage.getItem('stoa_token') || ''; },
+      get pinHash() { return localStorage.getItem('stoa_pin_hash') || ''; },
+      _hash(s) { let h=0; for(let i=0;i<s.length;i++) h=(Math.imul(31,h)+s.charCodeAt(i))|0; return h.toString(36); },
+      isConfigured() { return !!(this.token && this.pinHash); },
+      checkPin(pin) { return this._hash(pin) === this.pinHash; },
+      setup(token, pin) {
+        localStorage.setItem('stoa_token', token);
+        localStorage.setItem('stoa_pin_hash', this._hash(pin));
+      },
+      headers() { return this.token ? {'Authorization':'Bearer '+this.token} : {}; },
+      wsUrl(base) { return this.token ? base+'?token='+encodeURIComponent(this.token) : base; },
+    };
+    let _pinBuf = '';
+    function _updateDots() {
+      for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled', i<_pinBuf.length);
+    }
+    function _pinKey(k) {
+      if(k==='clear'){ _pinBuf=_pinBuf.slice(0,-1); _updateDots(); return; }
+      if(k==='ok'){ _submitPin(); return; }
+      if(_pinBuf.length<4){ _pinBuf+=k; _updateDots(); }
+      if(_pinBuf.length===4) _submitPin();
+    }
+    function _submitPin() {
+      if(!AUTH.isConfigured()) return;
+      if(AUTH.checkPin(_pinBuf)){
+        document.getElementById('pin-screen').style.display='none';
+        document.getElementById('pin-error').textContent='';
+        _pinBuf=''; _updateDots();
+        setTimeout(()=>_appReady(),0);
+      } else {
+        document.getElementById('pin-error').textContent='PIN incorreto';
+        _pinBuf=''; _updateDots();
+        setTimeout(()=>{ document.getElementById('pin-error').textContent=''; },1500);
+      }
+    }
+    function saveSetup() {
+      const token=document.getElementById('setup-token').value.trim();
+      const pin=document.getElementById('setup-pin').value.trim();
+      if(!token){ alert('Cole o STOA_TOKEN do .env'); return; }
+      if(!/^\d{4}$/.test(pin)){ alert('PIN deve ter exatamente 4 dígitos'); return; }
+      AUTH.setup(token, pin);
+      document.getElementById('pin-setup').style.display='none';
+      document.getElementById('pin-label').textContent='Digite seu PIN';
+      document.getElementById('pin-grid').style.display='grid';
+    }
+    document.querySelectorAll('.pin-key').forEach(btn=>btn.addEventListener('click',()=>_pinKey(btn.dataset.k)));
+    (function initPinScreen(){
+      if(!AUTH.isConfigured()){
+        document.getElementById('pin-label').textContent='Configure o acesso';
+        document.getElementById('pin-grid').style.display='none';
+        document.getElementById('pin-setup').style.display='grid';
+      }
+      // Se não há token, inicia sem autenticação
+      if(!AUTH.token) { document.getElementById('pin-screen').style.display='none'; setTimeout(()=>_appReady(),0); }
+    })();
+    // ── Fim Auth ─────────────────────────────────────────────────────────────
+      const state={messages:[],lastPayload:null,lastTimeline:null,devices:[],pendingDeviceActionId:null,lastDeviceAction:null,lastVoiceError:null,pendingDeviceActions:[],networkStatus:"online"};
+    const voiceState = {
+      recognition: null,
+      isListening: false,
+      isStarting: false,
+      isSupported: false,
+      hasPendingResult: false,
+      lastError: null,
+    };
+    function esc(t){return String(t||"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}
+    function humanDeviceStatus(status){
+      return ({online:"online",offline:"offline",stale:"instável",busy:"executando"})[status] || status || "-";
+    }
+    function humanActionStatus(status){
+      return ({
+        waiting_confirmation:"aguardando confirmação",
+        queued:"na fila",
+        dispatched:"executando",
+        running:"executando",
+        succeeded:"concluído",
+        failed:"falhou",
+        timed_out:"falhou",
+        cancelled:"cancelado",
+      })[status] || status || "-";
+    }
+    function setVoiceState(type, message="") {
+      const box = $("voice-status");
+      const button = $("voice");
+      box.className = "voice-status";
+      button.classList.remove("active-voice");
+      if (!message) {
+        box.textContent = "";
+        return;
+      }
+      box.textContent = message;
+      box.classList.add("show");
+      if (type) box.classList.add(type);
+      if (type === "error") {
+        if (state.lastVoiceError === message) return;
+        state.lastVoiceError = message;
+        setTimeout(() => {
+          if (box.textContent === message) {
+            box.textContent = "";
+            box.className = "voice-status";
+          }
+        }, 4000);
+      } else {
+        state.lastVoiceError = null;
+      }
+      if (type === "listening") button.classList.add("active-voice");
+    }
+    function resetVoiceUi() {
+      voiceState.isListening = false;
+      voiceState.isStarting = false;
+      voiceState.hasPendingResult = false;
+      $("voice").innerHTML = VOICE_BUTTON_ICON; $("voice").setAttribute("aria-label", "Microfone");
+      $("voice").disabled = !voiceState.isSupported;
+      if (!voiceState.lastError) {
+        setVoiceState("", "");
+      }
+    }
+    function clearVoicePendingState() {
+      voiceState.isListening = false;
+      voiceState.isStarting = false;
+      voiceState.hasPendingResult = false;
+    }
+    function showVoiceError(message) {
+      if (!message) return;
+      if (voiceState.lastError === message) return;
+      voiceState.lastError = message;
+      setVoiceState("error", message);
+      setTimeout(() => {
+        if (voiceState.lastError === message) {
+          voiceState.lastError = null;
+          if (!voiceState.isListening && !voiceState.isStarting) {
+            setVoiceState("", "");
+          }
+        }
+      }, 4000);
+    }
+    function setNetworkState(status, message="") {
+      state.networkStatus = status || "online";
+      const banner = $("network-banner");
+      banner.className = "banner";
+      if (!message || status === "online") {
+        banner.textContent = "";
+        return;
+      }
+      // Mostrar apenas erros persistentes e status de reconexão simples
+      if (status === "reconnecting") {
+        banner.textContent = "Reconectando...";
+        banner.classList.add("show", "info");
+        return;
+      }
+      banner.textContent = message;
+      banner.classList.add("show", status === "offline" ? "error" : "info");
+    }
+    async function safeFetch(url, options = {}, retryCount = 1) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 25000);
+        const response = await fetch(url, {
+          ...options,
+          headers: { ...AUTH.headers(), ...(options.headers || {}) },
+          signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Autenticação necessária (401)');
+          }
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        setNetworkState("online", "");
+        return { success: true, data };
+      } catch (err) {
+        if (retryCount > 0) {
+          setNetworkState("reconnecting", "Reconectando ao backend...");
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return safeFetch(url, options, retryCount - 1);
+        }
+        const message = err?.name === "AbortError" ? "timeout" : (err?.message || "network_error");
+        setNetworkState("offline", `Falha de comunicação com o backend: ${message}`);
+        return { success: false, error: message };
+      }
+    }
+    function addMessage(text, role, meta={}) {
+      state.messages.push({text,role,meta});
+      // Limitar histórico de mensagens exibidas para evitar poluição visual
+      $("messages").innerHTML = state.messages.slice(-8).map(m=>`<div class="msg ${m.role==='user'?'user':''}"><div class="meta"><span>${m.role==='user'?'Você':(m.meta.mode||'STOA')}</span><span>${m.meta.status||m.meta.action||'-'}</span></div><div>${esc(m.text)}</div></div>`).join("");
+    }
+    function renderDevices(items=[]) {
+      state.devices = items;
+      $("devices-count").textContent = String(items.length);
+      const target = $("device-target");
+      target.innerHTML = items.length
+        ? items.map(device=>`<option value="${esc(device.device_id)}">${esc(device.device_name || device.device_id)} · ${esc(device.platform || "-")} · ${esc(humanDeviceStatus(device.status))}</option>`).join("")
+        : `<option value="">Nenhum dispositivo</option>`;
+      $("devices-list").innerHTML = items.length
+        ? items.map(device=>`
+          <div class="step">
+            <div class="top"><strong>${esc(device.device_name || device.device_id)}</strong><span class="status">${esc(humanDeviceStatus(device.status))}</span></div>
+            <div>${esc(device.device_id || "-")} · ${esc(device.platform || "-")} · fila=${esc(device.queue_depth ?? 0)}</div>
+            <div class="muted">caps=${esc((device.capabilities || []).map(cap => cap.action_type).join(", ") || "-")}</div>
+            <div class="muted">última ação=${esc(device.last_action_id || "-")} · atual=${esc(device.current_action_id || "-")}</div>
+            <div class="muted">último resultado=${esc(device.last_result?.output || device.last_result?.error || "-")}</div>
+          </div>
+        `).join("")
+        : `<div class="step">Nenhum dispositivo registrado ainda. Inicie o agent local para aparecer aqui.</div>`;
+    }
+      function renderDeviceAction(action, message="") {
+        if (!action) {
+          $("device-result").textContent = message || "Sem ação de dispositivo enviada ainda.";
+          return;
+        }
+      state.lastDeviceAction = action;
+      $("device-last-action").textContent = action.action_id || "-";
+      if (action.status === "waiting_confirmation") state.pendingDeviceActionId = action.action_id;
+      if (action.status !== "waiting_confirmation") state.pendingDeviceActionId = null;
+        const needsConfirmation = action.status === "waiting_confirmation";
+        const pendingList = (state.pendingDeviceActions || []).slice(0, 3).map(item => `
+          <div class="step${item.is_latest ? " latest-pending" : ""}">
+            <div class="top"><strong>${item.is_latest ? "Mais recente" : "Pendente"}</strong><span class="status">${esc(item.action_type || "-")}</span></div>
+            <div>${esc(item.summary || "-")}</div>
+            <div class="muted">${esc(item.created_at || "-")}</div>
+          </div>
+        `).join("");
+        $("device-result").innerHTML = `
+          <div><strong>${esc(action.action_type || "-")}</strong> · ${esc(humanActionStatus(action.status))} · risco=${esc(action.risk || "-")}</div>
+          <div class="muted">device=${esc(action.device_id || "-")} · target=${esc(action.target || "-")}</div>
+          <div class="muted">${esc(message || action.summary || "")}</div>
+          <div class="muted">confirmação=${esc(action.confirmation_prompt || "-")} · expira=${esc(action.confirmation_expires_at || "-")}</div>
+          <div class="muted">timeout=${esc(action.timeout_seconds ?? "-")}s · retry=${esc(action.retry_count ?? 0)}/${esc(action.max_retries ?? 0)} · retryable=${esc(action.retryable ?? false)} · terminal=${esc(action.terminal_failure ?? false)}</div>
+          <div class="muted">error_code=${esc(action.last_error_code || "-")} · terminal_reason=${esc(action.terminal_reason_code || "-")}</div>
+          ${pendingList ? `<div class="muted">Pendências sensíveis</div>${pendingList}` : ``}
+          ${needsConfirmation ? `<div class="actions"><button class="primary" onclick="window.__stoaConfirmLastAction()">Confirmar</button><button class="secondary" onclick="window.__stoaCancelLastAction()">Cancelar</button></div>` : ``}
+        `;
+      }
+    function handleDeviceEvent(event) {
+      const payload = event?.payload || {};
+      const action = payload.action_id ? payload : payload.action;
+      if (payload.device_id || action?.device_id) {
+        fetchDevices();
+      }
+      if (event.event_type === "device_heartbeat") {
+        return;
+      }
+      if (action) {
+        renderDeviceAction(action, `Evento de device: ${event.event_type || "-"}`);
+      }
+      addMessage(
+        payload.summary || action?.summary || `Evento de device: ${event.event_type || "-"}`,
+        "assistant",
+        {mode:"device",status:event.event_type || "device_event",action:"device_event"}
+      );
+    }
+    function renderSteps(el, steps) {
+      el.innerHTML = (steps||[]).map(s=>`<div class="step"><div class="top"><strong>${esc(s.title||'Etapa')}</strong><span class="status">${esc(s.status||'pending')}</span></div><div>${esc(s.description||'')}</div></div>`).join("");
+    }
+    function renderTimeline(transition={}, explanation={}, previewValidity={}, executionModel={}) {
+      const items = [];
+      if (transition.next_phase) {
+        items.push(`
+          <div class="timeline-item">
+            <div class="meta"><span>Transição</span><span>${esc(transition.rule_name || "-")}</span></div>
+            <div><strong>${esc(transition.previous_phase || "idle")}</strong> <span class="timeline-arrow">→</span> <strong>${esc(transition.next_phase || "-")}</strong></div>
+            <div class="muted">${esc(transition.reason || "")}</div>
+          </div>
+        `);
+      }
+      if (previewValidity.status) {
+        items.push(`
+          <div class="timeline-item">
+            <div class="meta"><span>Preview</span><span class="sev-${esc(previewValidity.severity || "ok")}">${esc(previewValidity.severity || "ok")}</span></div>
+            <div><strong>${esc(previewValidity.status)}</strong></div>
+            <div class="muted">${esc(previewValidity.reason || "")}</div>
+          </div>
+        `);
+      }
+      if (executionModel.current_operation_id || executionModel.current_step_id) {
+        items.push(`
+          <div class="timeline-item">
+            <div class="meta"><span>Execução</span><span>${esc(executionModel.execution_status || "-")}</span></div>
+            <div>Operation: <strong>${esc(executionModel.current_operation_id || "-")}</strong></div>
+            <div>Step: <strong>${esc(executionModel.current_step_id || "-")}</strong> / ${esc(executionModel.current_step_status || "-")}</div>
+          </div>
+        `);
+      }
+      if (explanation.summary) {
+        items.push(`
+          <div class="timeline-item">
+            <div class="meta"><span>Resumo</span><span>${esc(explanation.phase_label || "-")}</span></div>
+            <div class="muted">${esc(explanation.summary)}</div>
+          </div>
+        `);
+      }
+      $("timeline").innerHTML = items.join("") || `<div class="timeline-item"><div class="muted">Sem timeline operacional ainda.</div></div>`;
+    }
+    function renderPersistentTimeline(items=[], summary={}) {
+      $("timeline-summary").textContent = summary.count
+        ? `Eventos: ${summary.count} | Severidade: ${JSON.stringify(summary.by_severity || {})} | Progresso: done=${summary.progress?.done_steps || 0}, failed=${summary.progress?.failed_steps || 0}, active=${summary.progress?.in_progress_steps || 0}`
+        : "Sem eventos persistentes para os filtros atuais.";
+      $("timeline").innerHTML = items.length ? items.map(item=>`
+        <div class="timeline-item">
+          <div class="meta"><span>${esc(item.event_code || item.event_type || "event")}</span><span>${esc(item.severity || "-")}</span></div>
+          <div><strong>${esc(item.phase || "-")}</strong> · ${esc(item.event_domain || "-")} / ${esc(item.event_outcome || "-")}</div>
+          <div class="muted">${esc(item.summary || "")}</div>
+          <div class="muted">goal=${esc(item.goal_id || "-")} · op=${esc(item.operation_id || "-")} · preview=${esc(item.preview_id || "-")}</div>
+        </div>
+      `).join("") : `<div class="timeline-item"><div class="muted">Sem eventos persistentes para exibir.</div></div>`;
+    }
+    function renderTrajectoryEpisodes(episodes=[], summary={}) {
+      $("trajectory-summary").textContent = summary.episode_count
+        ? `${summary.active_goal_narrative || `Goal atual: ${summary.goal_current || "-"} | Fase dominante: ${summary.dominant_phase || "-"} | Blockers: ${(summary.blockers_active || []).join(", ") || "-"} | Próximo destravamento: ${summary.next_unlock_action || "-"}`} | foco=${summary.focus?.focus_type || "-"}:${summary.focus?.focus_id || "-"} | prioridade=${summary.priority_headline || "-"}${summary.hidden_episode_count ? ` | episódios ocultos: ${summary.hidden_episode_count}` : ""}`
+        : "Sem trajetória operacional correlacionada ainda.";
+      const visibilityFilter = $("timeline-visibility").value;
+      const filteredEpisodes = visibilityFilter ? episodes.filter(episode => episode.visibility === visibilityFilter) : episodes;
+      if (!filteredEpisodes.length) {
+        $("timeline").innerHTML = `<div class="timeline-item"><div class="muted">Nenhum episódio para os filtros atuais.</div></div>`;
+        return;
+      }
+      $("timeline").innerHTML = filteredEpisodes.map(episode=>`
+        <details class="timeline-item">
+          <summary><strong>${esc(episode.trajectory_id || "-")}</strong> · ${esc(episode.status || "-")} · ${esc(episode.dominant_phase || "-")} · eventos=${esc(episode.event_count || 0)} · prioridade=${esc(episode.priority_label || "-")} (${esc(episode.priority_score ?? "-")}) · vis=${esc(episode.visibility || "-")} · confiança=${esc(episode.confidence?.label || "-")} (${esc(episode.confidence?.score ?? "-")})</summary>
+          <div class="muted">${esc(episode.latest_summary || "")}</div>
+          <div class="muted">goal=${esc(episode.goal_id || "-")} · op=${esc(episode.operation_id || "-")} · preview=${esc(episode.preview_id || "-")} · step=${esc(episode.step_id || "-")}</div>
+          <div class="muted">blockers=${esc((episode.blockers_active || []).join(", ") || "-")} · next=${esc(episode.next_unlock_action || "-")} · ruído=${esc(episode.noise_score ?? "-")} (${esc(episode.noise_reason || "-")}) · prioridade=${esc(episode.priority_reason || "-")}</div>
+          ${(episode.events || []).slice(0, 6).map(item=>`
+            <div class="step">
+              <div class="meta"><span>${esc(item.event_code || item.event_type || "event")}</span><span>${esc(item.severity || "-")}</span></div>
+              <div>${esc(item.summary || "")}</div>
+            </div>
+          `).join("")}
+        </details>
+      `).join("");
+    }
+    async function fetchPersistentTimeline() {
+      const payload = state.lastPayload || {};
+      const d = payload.data?.details || {};
+      const executionModel = d.execution_model || {};
+      const params = new URLSearchParams();
+      if (executionModel.goal_id) params.set("goal_id", executionModel.goal_id);
+      if (executionModel.current_operation_id) params.set("operation_id", executionModel.current_operation_id);
+      if ($("timeline-visibility").value) params.set("visibility", $("timeline-visibility").value);
+      if ($("timeline-severity").value) params.set("severity", $("timeline-severity").value);
+      if ($("timeline-phase").value) params.set("phase", $("timeline-phase").value);
+      params.set("limit", "20");
+      try {
+        const [timelineRes, trajectoriesRes] = await Promise.all([
+          safeFetch(`/api/events/timeline?${params.toString()}`),
+          safeFetch(`/api/events/trajectories?${params.toString()}`),
+        ]);
+        if (!timelineRes.success || !trajectoriesRes.success) {
+          throw new Error(timelineRes.error || trajectoriesRes.error || "network_error");
+        }
+        const timelinePayload = timelineRes.data;
+        const trajectoriesPayload = trajectoriesRes.data;
+        state.lastTimeline = { timelinePayload, trajectoriesPayload };
+        renderPersistentTimeline(timelinePayload.items || [], timelinePayload.summary || {});
+        renderTrajectoryEpisodes(trajectoriesPayload.episodes || [], trajectoriesPayload.summary || {});
+      } catch (err) {
+        $("timeline-summary").textContent = `Falha ao consultar timeline persistente: ${err.message || err}`;
+      }
+    }
+    async function fetchDevices() {
+      const result = await safeFetch("/api/devices");
+      if (!result.success) {
+        $("device-result").textContent = `Falha ao listar dispositivos: ${result.error}`;
+        return;
+      }
+      renderDevices(result.data.items || []);
+    }
+    async function sendDeviceAction() {
+      const deviceId = $("device-target").value;
+      const actionType = $("device-action-type").value;
+      const rawTarget = $("device-command").value.trim();
+      const confirmed = $("device-confirm").checked;
+      if (!deviceId) {
+        $("device-result").textContent = "Nenhum dispositivo selecionado.";
+        return;
+      }
+      const payload = {
+        device_id: deviceId,
+        action_type: actionType,
+        target: rawTarget || null,
+        confirmed,
+        command_text: `device:${actionType}:${rawTarget || "-"}`,
+      };
+      const result = await safeFetch("/api/devices/actions", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload),
+        });
+      if (!result.success) {
+        $("device-result").textContent = `Falha ao enviar ação ao dispositivo: ${result.error}`;
+        return;
+      }
+      const response = result.data;
+        renderDeviceAction(response.action, response.message);
+        $("device-command").value = "";
+        await fetchDevices();
+    }
+    async function confirmLastDeviceAction() {
+      if (!state.pendingDeviceActionId) {
+        $("device-result").textContent = "Não há ação sensível pendente para confirmar.";
+        return;
+      }
+      sendCommand("confirmar última ação");
+    }
+    async function cancelLastDeviceAction() {
+      if (!state.pendingDeviceActionId) {
+        $("device-result").textContent = "Não há ação sensível pendente para cancelar.";
+        return;
+      }
+      sendCommand("cancelar última ação");
+    }
+    function updatePlanPreviewCard(status={}) {
+      const preview = status.preview || {};
+      $("preview-id").textContent = preview.id || "-";
+      const files = Array.isArray(preview.files_to_change)?preview.files_to_change:[];
+      $("preview-files").textContent = files.length ? files.join(", ") : "-";
+      $("preview-validity").innerHTML = status.exists ? `<span class="pill ${status.valid ? 'soft-invalid' : 'hard-invalid'}">${status.valid ? 'Válido' : 'Expirado'}</span>` : "-";
+      $("next-unlock").textContent = status.exists ? `expira em ${preview.expires_at || '-'} ` : "-";
+      $("apply").disabled = !status.valid;
+      $("cancel").disabled = !status.exists;
+    }
+
+    function renderPreviewBanner(status) {
+      const banner = $("pwa-banner");
+      if (!status || !status.exists) {
+        banner.className = "banner";
+        banner.textContent = "";
+        return;
+      }
+      const expires = status.preview?.expires_at ? `expira ${status.preview.expires_at}` : "sem expiração";
+      if (status.valid) {
+        banner.className = "banner info show";
+        banner.textContent = `Preview pendente ${status.preview?.id || '-'}: ${expires}. Clique Aplicar ou Cancelar.`;
+      } else {
+        banner.className = "banner warning show";
+        banner.textContent = `Preview expirado ${status.preview?.id || '-'} ${expires}. Gere um novo preview.`;
+      }
+    }
+
+    async function fetchPreviewStatus() {
+      const result = await safeFetch('/api/planner/status');
+      if (!result.success) {
+        $("preview-id").textContent = "-";
+        $("preview-files").textContent = "-";
+        $("preview-validity").textContent = "falha";
+        return null;
+      }
+      const status = result.data.preview_status || {};
+      updatePlanPreviewCard(status);
+      renderPreviewBanner(status);
+      return status;
+    }
+
+    async function applyPreview() {
+      const res = await safeFetch('/api/planner/apply', {method:'POST', headers:{'Content-Type':'application/json'}});
+      if (!res.success) {
+        addMessage(`Erro ao aplicar preview: ${res.error}`,'assistant',{mode:'planner',status:'error'});
+        return;
+      }
+      addMessage(res.data.response || 'Preview aplicado', 'assistant', {mode:'planner',status:res.data.status});
+      await fetchPreviewStatus();
+      if (res.data.details && res.data.details.change_set) {
+        applyPayload({response: res.data.response, data:{details:res.data.details}});
+      }
+    }
+
+    async function cancelPreview() {
+      const res = await safeFetch('/api/planner/cancel', {method:'POST', headers:{'Content-Type':'application/json'}});
+      if (!res.success) {
+        addMessage(`Erro ao cancelar preview: ${res.error}`,'assistant',{mode:'planner',status:'error'});
+        return;
+      }
+      addMessage(res.data.response || 'Preview cancelado', 'assistant', {mode:'planner',status:res.data.status});
+      await fetchPreviewStatus();
+    }
+
+    function applyPayload(payload) {
+      state.lastPayload = payload;
+        const data = payload.data || {};
+        const d = data.details || {};
+        state.pendingDeviceActions = Array.isArray(d.pending_device_actions) ? d.pending_device_actions : state.pendingDeviceActions;
+        $("hero-mode").textContent = `Modo: ${data.mode || '-'}`;
+      $("hero-status").textContent = `Status: ${data.status || '-'}`;
+      $("hero-phase").textContent = `Fase: ${d.phase_label || d.operational_state?.current_phase || '-'}`;
+      $("hero-op").textContent = `Operation: ${d.operation_id || '-'}`;
+      $("goal-title").textContent = d.goal || "Nenhum objetivo ativo";
+      $("goal-status").textContent = d.active_goal_status || "-";
+      renderSteps($("goal-steps"), Array.isArray(d.plan_steps)?d.plan_steps:[]);
+      $("guidance-msg").textContent = payload.response || "Sem guidance.";
+      renderSteps($("next-step"), d.next_step?[d.next_step]:[]);
+      $("blockers").innerHTML = Array.isArray(d.blockers)?d.blockers.map(b=>`<div class="step">${esc(b)}</div>`).join(""):"";
+      $("preview-id").textContent = d.preview_id || "-";
+      const files = Array.isArray(d.preview_files_to_change)?d.preview_files_to_change:(Array.isArray(d.files_to_change)?d.files_to_change:[]);
+      $("preview-files").textContent = files.length?files.join(", "):"-";
+      const previewValidity = d.preview_validity || {};
+      $("preview-validity").innerHTML = previewValidity.status ? `<span class="pill ${esc((previewValidity.severity||'ok').replace('_','-'))}">${esc(previewValidity.status)} / ${esc(previewValidity.severity || 'ok')}</span>` : "-";
+      $("next-unlock").textContent = d.next_unlock_action || d.execution_model?.next_unlock_action || "-";
+      $("phase-label").textContent = d.phase_label || d.decision_explanation?.phase_label || d.operational_state?.current_phase || "-";
+      $("risk-level").textContent = d.risk_level || "-";
+        $("operational-message").textContent = d.operational_message || d.decision_explanation?.user_message || "Sem explicação operacional ainda.";
+        $("governance-notes").innerHTML = Array.isArray(d.decision_explanation?.governance_notes) ? d.decision_explanation.governance_notes.map(n=>`<div class="step">${esc(n)}</div>`).join("") : "";
+        renderTimeline(d.operational_transition || {}, d.decision_explanation || {}, previewValidity, d.execution_model || {});
+        $("diffs").innerHTML = Array.isArray(d.estimated_diffs)?d.estimated_diffs.map(x=>`<div class="diff"><div class="meta"><span>${esc(x.path||x.type||'step')}</span><span>${x.would_modify?'modifica':'valida'}</span></div><pre>${esc(x.estimated_diff||'Sem diff estimado.')}</pre></div>`).join(""):"";
+        if (d.device_action) renderDeviceAction(d.device_action, d.device_confirmation?.prompt || payload.response || "");
+        if (Array.isArray(d.devices)) renderDevices(d.devices);
+        fetchPersistentTimeline();
+      }
+    async function sendCommand(text) {
+      const command=(text||"").trim(); if(!command) return;
+      addMessage(command,"user",{status:"conversation_answer",action:"user_command"});
+      $("command").value="";
+      const result = await safeFetch("/api/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:command})});
+      if (!result.success) {
+        return;
+      }
+      const payload = result.data;
+      addMessage(payload.response,"assistant",{mode:payload.data?.mode,status:payload.data?.status,action:payload.action_type});
+      applyPayload(payload);
+      if ("speechSynthesis" in window && payload.response) {
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(payload.response); u.lang = "pt-BR"; speechSynthesis.speak(u);
+      }
+    }
+    function initWs() {
+      const proto = location.protocol === "https:" ? "wss:" : "ws:";
+      const ws = new WebSocket(AUTH.wsUrl(`${proto}//${location.host}/ws`));
+      ws.onmessage = ev => {
+        try {
+          const payload = JSON.parse(ev.data);
+          if (payload.type === "device_event" && payload.event) {
+            handleDeviceEvent(payload.event);
+            return;
+          }
+          if(payload.response){
+            addMessage(payload.response,"assistant",{mode:payload.data?.mode,status:payload.data?.status,action:payload.action_type});
+            applyPayload(payload);
+          }
+        } catch(e){}
+      };
+      ws.onclose = () => {
+        setNetworkState("reconnecting", "Conexão em tempo real perdida. Tentando reconectar...");
+        setTimeout(initWs, 3000);
+      };
+    }
+    // ── Voz: MediaRecorder → Whisper + fallback SpeechRecognition ────────────
+    const mediaVoice = {
+      recorder: null,
+      chunks: [],
+      recording: false,
+      supported: !!(navigator.mediaDevices && window.MediaRecorder),
+    };
+
+    async function startMediaRecorder() {
+      if(mediaVoice.recording) { stopMediaRecorder(); return; }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        const options = MediaRecorder.isTypeSupported('audio/webm') ? {mimeType:'audio/webm'} : {};
+        mediaVoice.recorder = new MediaRecorder(stream, options);
+        mediaVoice.chunks = [];
+        mediaVoice.recorder.ondataavailable = e => { if(e.data.size>0) mediaVoice.chunks.push(e.data); };
+        mediaVoice.recorder.onstop = async () => {
+          stream.getTracks().forEach(t=>t.stop());
+          const blob = new Blob(mediaVoice.chunks, {type: mediaVoice.recorder.mimeType || 'audio/webm'});
+          mediaVoice.recording = false;
+          updateVoiceBtn(false);
+          setVoiceState('processing','Transcrevendo áudio...');
+          try {
+            const form = new FormData();
+            const ext = (mediaVoice.recorder.mimeType||'audio/webm').includes('ogg') ? 'ogg' : 'webm';
+            form.append('file', blob, `audio.${ext}`);
+            const res = await fetch('/api/voice', {method:'POST', headers:AUTH.headers(), body:form});
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            const {text} = await res.json();
+            if(text){ $('command').value=text; setVoiceState('processing','Enviando...'); await sendCommand(text); }
+            else setVoiceState('error','Nenhuma fala detectada.');
+          } catch(err) {
+            setVoiceState('error',`Erro na transcrição: ${err.message}`);
+          }
+        };
+        mediaVoice.recorder.start();
+        mediaVoice.recording = true;
+        updateVoiceBtn(true);
+        setVoiceState('listening','Gravando... Toque novamente para parar.');
+      } catch(err) {
+        setVoiceState('error',`Microfone bloqueado: ${err.message}`);
+      }
+    }
+
+    function stopMediaRecorder() {
+      if(mediaVoice.recorder && mediaVoice.recording){
+        mediaVoice.recorder.stop();
+      }
+    }
+
+    function updateVoiceBtn(recording) {
+      const btn = $('voice');
+      if(recording){
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="#ff6b6b" stroke="#ff6b6b" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+        btn.setAttribute('aria-label','Parar gravação');
+        btn.classList.add('active-voice');
+      } else {
+        btn.innerHTML = VOICE_BUTTON_ICON;
+        btn.setAttribute('aria-label','Microfone');
+        btn.classList.remove('active-voice');
+      }
+    }
+
+    function initVoiceRecognition() {
+      const insecureMobileOrigin = !window.isSecureContext && !["localhost", "127.0.0.1"].includes(location.hostname);
+      if (insecureMobileOrigin) {
+        voiceState.isSupported = false;
+        $("voice").disabled = true;
+        $("voice").setAttribute("aria-label", "Microfone indisponível sem HTTPS");
+        setVoiceState("error", "Voz indisponível sem HTTPS. Digite sua mensagem abaixo.");
+        $("command").placeholder = "Digite aqui (voz requer HTTPS)";
+        return;
+      }
+      if (!SpeechRecognition) {
+        $("voice").disabled = true;
+        setVoiceState("error", "Reconhecimento de voz não suportado neste navegador. Use digitação como fallback.");
+        return;
+      }
+      if (voiceState.recognition) return;
+      voiceState.isSupported = true;
+      voiceState.recognition = new SpeechRecognition();
+      voiceState.recognition.lang = "pt-BR";
+      voiceState.recognition.interimResults = false;
+      voiceState.recognition.maxAlternatives = 1;
+      voiceState.recognition.continuous = false;
+
+      voiceState.recognition.onstart = () => {
+        voiceState.isStarting = false;
+        voiceState.isListening = true;
+        voiceState.lastError = null;
+        $("voice").innerHTML = VOICE_BUTTON_ICON; $("voice").setAttribute("aria-label", "Microfone ouvindo");
+        $("voice").disabled = false;
+        setVoiceState("listening", "Ouvindo. Fale agora.");
+      };
+
+      voiceState.recognition.onresult = (event) => {
+        const transcript = Array.from(event.results || [])
+          .map(result => result?.[0]?.transcript || "")
+          .join(" ")
+          .trim();
+        if (!transcript || voiceState.hasPendingResult) return;
+        voiceState.hasPendingResult = true;
+        $("command").value = transcript;
+        setVoiceState("processing", "Fala reconhecida. Enviando comando...");
+        sendCommand(transcript).finally(() => {
+          voiceState.hasPendingResult = false;
+        });
+      };
+
+      voiceState.recognition.onerror = function(event) {
+        console.error('[STT] Erro:', event.error);
+
+        const statusEl = document.getElementById('voice-status')
+                     || document.getElementById('status')
+                     || document.querySelector('.status')
+                     || document.querySelector('[class*="status"]');
+        const inputEl = document.getElementById('command')
+                     || document.getElementById('command-input')
+                     || document.getElementById('message-input')
+                     || document.querySelector('input[type="text"]')
+                     || document.querySelector('textarea');
+
+        if (event.error === 'network') {
+          if (statusEl) {
+            statusEl.textContent = 'Voz indisponível sem HTTPS. Digite sua mensagem abaixo.';
+            if (statusEl.classList && !statusEl.classList.contains('show')) {
+              statusEl.classList.add('show');
+            }
+          }
+          if (inputEl) {
+            inputEl.focus();
+            inputEl.placeholder = 'Digite aqui (voz requer HTTPS)';
+          }
+        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          if (statusEl) statusEl.textContent = 'Microfone bloqueado. Verifique as permissões.';
+        } else {
+          if (statusEl) statusEl.textContent = 'Erro no microfone: ' + event.error;
+        }
+
+        voiceState.lastError = null;
+        if (typeof clearVoicePendingState === 'function') clearVoicePendingState();
+        if (typeof resetVoiceUi === 'function') resetVoiceUi();
+      };
+
+      voiceState.recognition.onend = () => {
+        resetVoiceUi();
+      };
+    }
+
+    function toggleVoiceRecognition() {
+      if (!voiceState.isSupported || !voiceState.recognition) return;
+      if (voiceState.isListening || voiceState.isStarting) {
+        try {
+          voiceState.recognition.stop();
+        } catch (_) {}
+        return;
+      }
+      voiceState.isStarting = true;
+      voiceState.lastError = null;
+      $("voice").disabled = true;
+      $("voice").innerHTML = VOICE_BUTTON_ICON; $("voice").setAttribute("aria-label", "Microfone iniciando");
+      setVoiceState("processing", "Solicitando acesso ao microfone...");
+      $("command").focus();
+      try {
+        voiceState.recognition.start();
+      } catch (error) {
+        voiceState.isStarting = false;
+        if (String(error?.message || error).toLowerCase().includes("already started")) {
+          try {
+            voiceState.recognition.stop();
+          } catch (_) {}
+          resetVoiceUi();
+          return;
+        }
+        showVoiceError(`Não foi possível iniciar o microfone: ${error.message || error}`);
+        resetVoiceUi();
+      }
+    }
+    $("send").onclick = ()=>sendCommand($("command").value);
+    const voiceBtn = document.getElementById('voice');
+    if (voiceBtn) {
+        const freshBtn = voiceBtn.cloneNode(true);
+        voiceBtn.parentNode.replaceChild(freshBtn, voiceBtn);
+        let lastVoiceTouchAt = 0;
+
+        const triggerVoiceToggle = function(e) {
+            const now = Date.now();
+            const isTouchEvent = e.type === 'touchend' || (e.type === 'pointerup' && e.pointerType === 'touch');
+            if (isTouchEvent) {
+                lastVoiceTouchAt = now;
+                e.preventDefault();
+                e.stopPropagation();
+                if(mediaVoice.supported) startMediaRecorder(); else toggleVoiceRecognition();
+                return;
+            }
+            if (now - lastVoiceTouchAt < 700) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            e.preventDefault();
+            e.stopPropagation();
+            if(mediaVoice.supported) startMediaRecorder(); else toggleVoiceRecognition();
+        };
+
+        freshBtn.addEventListener('touchend', triggerVoiceToggle, { passive: false });
+        freshBtn.addEventListener('pointerup', triggerVoiceToggle, { passive: false });
+        freshBtn.addEventListener('click', triggerVoiceToggle, { passive: false });
+    }
+    $("next-action").onclick = ()=>sendCommand("o que eu faço agora?");
+    $("preview-now").onclick = async ()=>{
+      const command = $("command").value.trim() || "planeje mudanças para o projeto";
+      const r = await safeFetch('/api/planner/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({command})});
+      if (!r.success) {
+        addMessage(`Falha ao criar preview: ${r.error}`,'assistant',{mode:'planner',status:'error'});
+        return;
+      }
+      if (r.data?.response) addMessage(r.data.response, 'assistant', {mode:'planner',status:r.data.status});
+      await fetchPreviewStatus();
+    };
+    $("apply").onclick = ()=>applyPreview();
+    $("cancel").onclick = ()=>cancelPreview();
+    $("ops-history").onclick = ()=>sendCommand("últimas operações");
+    $("ops-health").onclick = ()=>sendCommand("resuma a saúde operacional");
+    $("timeline-refresh").onclick = ()=>fetchPersistentTimeline();
+    $("timeline-visibility").onchange = ()=>fetchPersistentTimeline();
+    $("timeline-severity").onchange = ()=>fetchPersistentTimeline();
+    $("timeline-phase").onchange = ()=>fetchPersistentTimeline();
+
+    $("stoa-toggle").onclick = ()=>toggleStoa();
+    $("stoa-psych").onclick = ()=>stoaAction("modo psicólogo stoa")
+    $("stoa-plan").onclick = ()=>stoaAction("modo planejamento stoa")
+    $("stoa-release").onclick = ()=>stoaAction("ativar 99 funcoes stoa")
+    $("stoa-goal-set").onclick = ()=>{
+      const goal = $("stoa-goal-input").value.trim();
+      if(!goal){ alert('Informe um objetivo do STOA.'); return; }
+      stoaAction(`defina objetivo ${goal}`);
+      $("stoa-goal-input").value = '';
+    };
+
+    $("devices-refresh").onclick = ()=>fetchDevices();
+    $("device-send").onclick = ()=>sendDeviceAction();
+    $("device-confirm-last").onclick = ()=>confirmLastDeviceAction();
+    $("device-cancel-last").onclick = ()=>cancelLastDeviceAction();
+    window.__stoaConfirmLastAction = confirmLastDeviceAction;
+    window.__stoaCancelLastAction = cancelLastDeviceAction;
+    $("command").addEventListener("keydown", e => { if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendCommand($("command").value); } });
+    addMessage("Interface mobile do STOA pronta. Use texto, preview/apply/cancel e acompanhe o estado operacional aqui.","assistant",{mode:"conversation",status:"conversation_answer",action:"boot"});
+    function updateOnlineState() {
+      $("offline-banner").classList.toggle("show", !navigator.onLine);
+      if (navigator.onLine && state.networkStatus === "offline") {
+        setNetworkState("reconnecting", "Rede disponível novamente. Tentando reconectar...");
+      }
+    }
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    updateOnlineState();
+
+    let deferredInstallPrompt = null;
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      const banner = $("pwa-banner");
+      banner.textContent = "Instalação PWA disponível no navegador. Use o menu do Chrome ou o prompt de instalação.";
+      banner.classList.add("show");
+    });
+
+    async function registerServiceWorker() {
+      if (!("serviceWorker" in navigator)) return;
+      const banner = $("pwa-banner");
+      if (!window.isSecureContext) {
+        banner.textContent = "Origem não segura: em http://IP o Chrome Android costuma mostrar apenas 'Adicionar à tela inicial'. Para installability real da PWA, abra o STOA em HTTPS ou localhost.";
+        banner.classList.add("show");
+        return;
+      }
+      try {
+        const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+        await navigator.serviceWorker.ready;
+        if (!navigator.serviceWorker.controller) {
+          banner.textContent = "Service worker registrado. Reabra a página uma vez para ele passar a controlar a shell.";
+          banner.classList.add("show");
+        } else {
+          console.info("Service worker ativo", registration.scope);
+        }
+      } catch (err) {
+        banner.textContent = `Falha ao registrar o service worker: ${err.message || err}`;
+        banner.classList.add("show");
+        console.error("SW register failed", err);
+      }
+    }
+
+    const stoaState = {active:false,mode:'standby',energy:100,latency:'-'};
+    function _appReady() {
+      initVoiceRecognition();
+      fetchDevices();
+      initWs();
+      fetchMemory();
+      fetchPreviewStatus();
+      setInterval(fetchPreviewStatus, 15000);
+      setInterval(updateStoaHeartbeat, 3000);
+      updateStoaDashboard();
+    }
+
+    function updateStoaDashboard() {
+      $('stoa-status').textContent = stoaState.active ? `ativo (${stoaState.mode})` : 'inativo';
+      $('stoa-level').textContent = stoaState.active ? 'Master' : 'Standby';
+      $('stoa-energy').textContent = `${stoaState.energy}%`;
+      $('stoa-latency').textContent = stoaState.latency;
+      $('stoa-functions').textContent = stoaState.active ? '99/99' : '0/99';
+      $('stoa-progress-bar').style.width = `${stoaState.energy}%`;
+      $('stoa-widget-msg').textContent = stoaState.active ? 'STOA está pronto para executar comandos avançados.' : 'Clique em ativar para iniciar a sinergia total.';
+      $('stoa-toggle').textContent = stoaState.active ? 'Desativar STOA' : 'Ativar STOA';
+      $('stoa-toggle').classList.toggle('active', stoaState.active);
+    }
+
+    function toggleStoa() {
+      stoaState.active = !stoaState.active;
+      stoaState.mode = stoaState.active ? 'stoa' : 'standby';
+      if (stoaState.active) {
+        sendCommand('modo stoa ativado: conduza analisador de objetivos e crie plano tatico');
+      } else {
+        sendCommand('modo stoa desativado: retorno ao modo padrao');
+      }
+      updateStoaDashboard();
+    }
+
+    async function stoaAction(command) {
+      if (!stoaState.active) {
+        alert('Ative STOA antes de usar modos avançados.');
+        return;
+      }
+      $('stoa-widget-msg').textContent = `Comando STOA: ${command}`;
+      await sendCommand(`stoa: ${command}`);
+      setTimeout(() => updateStoaDashboard(), 1000);
+    }
+
+    function updateStoaHeartbeat() {
+      if (!stoaState.active) return;
+      const delta = Math.max(0, stoaState.energy - 2);
+      stoaState.energy = Math.max(20, delta);
+      stoaState.latency = `${Math.round(100 + Math.random()*150)}ms`;
+      updateStoaDashboard();
+    }
+
+    // ── Haptic ───────────────────────────────────────────────────────────────
+    function haptic(pattern=[30]) { if(navigator.vibrate) navigator.vibrate(pattern); }
+
+    // ── Typing indicator ─────────────────────────────────────────────────────
+    function showTyping() {
+      const el = document.createElement('div');
+      el.id = 'typing-msg'; el.className = 'msg';
+      el.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      $('messages').appendChild(el);
+      $('messages').lastElementChild.scrollIntoView({behavior:'smooth'});
+    }
+    function hideTyping() { const el=$('typing-msg'); if(el) el.remove(); }
+
+    // ── Offline queue ────────────────────────────────────────────────────────
+    const offlineQueue = JSON.parse(localStorage.getItem('stoa_offline_queue')||'[]');
+    function saveOfflineQueue() { localStorage.setItem('stoa_offline_queue', JSON.stringify(offlineQueue)); }
+    async function flushOfflineQueue() {
+      if(!navigator.onLine || !offlineQueue.length) return;
+      const pending = offlineQueue.splice(0, offlineQueue.length);
+      saveOfflineQueue();
+      for(const cmd of pending) { await sendCommand(cmd); }
+    }
+    window.addEventListener('online', ()=>{ updateOnlineState(); setTimeout(flushOfflineQueue, 1000); });
+
+    // ── Push Notifications ───────────────────────────────────────────────────
+    async function requestPushPermission() {
+      if(!('Notification' in window)){ alert('Notificações não suportadas neste browser.'); return; }
+      const perm = await Notification.requestPermission();
+      if(perm !== 'granted'){ alert('Permissão de notificação negada.'); return; }
+      if(!navigator.serviceWorker){ alert('Service Worker não disponível.'); return; }
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if(!sub){
+        // VAPID não configurado: usa notificação local como fallback
+        new Notification('STOA', {body:'Notificações locais ativadas.', icon:'/icons/icon-192.png'});
+      }
+      $('mem-push').textContent = 'Notificações ativas';
+      $('mem-push').disabled = true;
+    }
+
+    function notifyLocal(title, body) {
+      if(Notification.permission === 'granted' && !document.hasFocus()){
+        new Notification(title, {body, icon:'/icons/icon-192.png'});
+      }
+    }
+
+    // ── Memória ──────────────────────────────────────────────────────────────
+    async function fetchMemory() {
+      const res = await safeFetch('/api/memory/recent?limit=15');
+      if(!res.success) return;
+      const {items, stats} = res.data;
+      $('mem-stat-episodic').textContent = stats?.episodic ?? '-';
+      $('mem-stat-semantic').textContent = stats?.semantic ?? '-';
+      const list = $('mem-list');
+      if(!items || !items.length){ list.innerHTML='<div class="muted" style="font-size:.82rem">Nenhuma memória ainda. Converse com o STOA para começar.</div>'; return; }
+      list.innerHTML = items.map(m=>`
+        <div class="mem-item">
+          <span class="cat">${esc(m.category)}</span>
+          <span class="mem-text">${esc(m.text.slice(0,180))}${m.text.length>180?'…':''}</span>
+          <button onclick="deleteMemory('${esc(m.id)}',this)">Esquecer</button>
+        </div>
+      `).join('');
+    }
+
+    async function deleteMemory(id, btn) {
+      haptic([20]);
+      btn.disabled = true; btn.textContent = '...';
+      const res = await safeFetch(`/api/memory/${id}`, {method:'DELETE'});
+      if(res.success) btn.closest('.mem-item').remove();
+      else { btn.disabled=false; btn.textContent='Esquecer'; }
+    }
+
+    // ── Patch sendCommand: haptic + typing + notificação ────────────────────
+    const _origSendCommand = sendCommand;
+    sendCommand = async function(text) {
+      const cmd = (text||'').trim(); if(!cmd) return;
+      if(!navigator.onLine){
+        offlineQueue.push(cmd); saveOfflineQueue();
+        addMessage('[Offline] Comando salvo. Será enviado quando a rede voltar.','assistant',{mode:'offline',status:'queued'});
+        haptic([50,50,50]);
+        return;
+      }
+      haptic([20]);
+      showTyping();
+      try { await _origSendCommand(cmd); }
+      finally { hideTyping(); }
+      notifyLocal('STOA', 'Resposta do agente recebida.');
+      haptic([30,30,60]);
+    };
+
+    // ── Patch updateVoiceBtn: ondas de áudio ─────────────────────────────────
+    const _origUpdateVoiceBtn = updateVoiceBtn;
+    updateVoiceBtn = function(recording) {
+      _origUpdateVoiceBtn(recording);
+      const wave = $('voice-wave');
+      if(wave) wave.classList.toggle('show', recording);
+    };
+
+    // ── Eventos UI de memória ─────────────────────────────────────────────────
+    document.getElementById('mem-refresh').onclick = ()=>fetchMemory();
+    document.getElementById('mem-push').onclick = ()=>requestPushPermission();
+
+    window.addEventListener("load", registerServiceWorker);
+    initVoiceRecognition();
+    fetchDevices();
+    initWs();
+  </script>
+</body>
+</html>
