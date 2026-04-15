@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  stoa-agent:
+    build: .
+    container_name: stoa-agent
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4.1-mini}
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - PORT=8000
+      - DEBUG=False
+      - LOCATION=Chapada dos Guimarães, Mato Grosso, BR
+      - LAT=-15.4667
+      - LON=-55.7500
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - stoa-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: stoa-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - stoa-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
+networks:
+  stoa-network:
+    driver: bridge
+
+volumes:
+  redis-data:

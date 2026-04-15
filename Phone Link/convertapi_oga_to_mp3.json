@@ -1,0 +1,111 @@
+{
+  "name": "ConvertAPI - OGA para MP3",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "Início",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://v2.convertapi.com/upload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/octet-stream"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "upload-node",
+      "name": "1. Upload do Arquivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300],
+      "notes": "Envia o arquivo OGA para a ConvertAPI e obtém o FileId.\nConfigure a credencial: Authorization = Bearer SEU_TOKEN_AQUI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://v2.convertapi.com/convert/oga/to/mp3",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"Parameters\": [\n    {\n      \"Name\": \"File\",\n      \"FileValue\": {\n        \"Id\": \"{{ $json.FileId }}\",\n        \"Name\": \"{{ $json.FileName }}\"\n      }\n    },\n    {\n      \"Name\": \"StoreFile\",\n      \"Value\": true\n    }\n  ]\n}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "convert-node",
+      "name": "2. Converter OGA para MP3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300],
+      "notes": "Recebe o FileId do nó anterior e converte para MP3.\nA resposta contém Files[0].Url com o link do MP3 gerado."
+    }
+  ],
+  "connections": {
+    "Início": {
+      "main": [
+        [
+          {
+            "node": "1. Upload do Arquivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "1. Upload do Arquivo": {
+      "main": [
+        [
+          {
+            "node": "2. Converter OGA para MP3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Faz upload de um arquivo OGA na ConvertAPI e converte para MP3. Requer credencial HTTP Header Auth com: Name=Authorization, Value=Bearer SEU_TOKEN"
+  }
+}
