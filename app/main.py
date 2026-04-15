@@ -30,6 +30,16 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env.safe")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("safe_stoa")
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def resolve_repo_path(env_name: str, default_path: Path) -> Path:
+    raw_value = os.getenv(env_name, str(default_path))
+    resolved = Path(raw_value)
+    if resolved.is_absolute():
+        return resolved
+    return REPO_ROOT / resolved
+
 
 class Config:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
@@ -64,29 +74,21 @@ class Config:
     AUTO_SAVE_ARTIFACTS = os.getenv("AUTO_SAVE_ARTIFACTS", "true").lower() == "true"
     RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60"))
     RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "30"))
-    AUDIT_LOG_PATH = Path(
-        os.getenv(
-            "AUDIT_LOG_PATH",
-            str(Path(__file__).resolve().parents[1] / "logs" / "audit.log"),
-        )
+    AUDIT_LOG_PATH = resolve_repo_path(
+        "AUDIT_LOG_PATH",
+        REPO_ROOT / "logs" / "audit.log",
     )
-    SESSION_STORE_PATH = Path(
-        os.getenv(
-            "SESSION_STORE_PATH",
-            str(Path(__file__).resolve().parents[1] / "data" / "sessions.json"),
-        )
+    SESSION_STORE_PATH = resolve_repo_path(
+        "SESSION_STORE_PATH",
+        REPO_ROOT / "data" / "sessions.json",
     )
-    PREVIEW_STORE_PATH = Path(
-        os.getenv(
-            "PREVIEW_STORE_PATH",
-            str(Path(__file__).resolve().parents[1] / "data" / "previews.json"),
-        )
+    PREVIEW_STORE_PATH = resolve_repo_path(
+        "PREVIEW_STORE_PATH",
+        REPO_ROOT / "data" / "previews.json",
     )
-    COWORKER_STORE_PATH = Path(
-        os.getenv(
-            "COWORKER_STORE_PATH",
-            str(Path(__file__).resolve().parents[1] / "data" / "coworker.json"),
-        )
+    COWORKER_STORE_PATH = resolve_repo_path(
+        "COWORKER_STORE_PATH",
+        REPO_ROOT / "data" / "coworker.json",
     )
     TERMINAL_TIMEOUT_SECONDS = int(os.getenv("TERMINAL_TIMEOUT_SECONDS", "20"))
     ALLOWED_COMMAND_PREFIXES = [
@@ -119,29 +121,21 @@ class Config:
         for alias, path in [entry.split("=", 1)]
         if alias.strip() and path.strip()
     }
-    WORKSPACE_ROOT = Path(
-        os.getenv(
-            "WORKSPACE_ROOT",
-            str(Path(__file__).resolve().parents[1] / "workspace"),
-        )
+    WORKSPACE_ROOT = resolve_repo_path(
+        "WORKSPACE_ROOT",
+        REPO_ROOT / "workspace",
     )
-    AVATAR_REFERENCE_PATH = Path(
-        os.getenv(
-            "STOA_AVATAR_REFERENCE_PATH",
-            r"C:\Users\ernan\Downloads\agente stoa\ChatGPT Image 2 de abr. de 2026, 20_42_15.png",
-        )
+    AVATAR_REFERENCE_PATH = resolve_repo_path(
+        "STOA_AVATAR_REFERENCE_PATH",
+        REPO_ROOT / "static" / "pwa-icons" / "icon-any.svg",
     )
-    REMOTE_HTML_PATH = Path(
-        os.getenv(
-            "STOA_REMOTE_HTML_PATH",
-            str(Path(__file__).resolve().parents[1] / "stoa_remote.html"),
-        )
+    REMOTE_HTML_PATH = resolve_repo_path(
+        "STOA_REMOTE_HTML_PATH",
+        REPO_ROOT / "stoa_remote.html",
     )
-    ALIVE_HTML_PATH = Path(
-        os.getenv(
-            "STOA_ALIVE_HTML_PATH",
-            str(Path(__file__).resolve().parents[1] / "stoa_alive.html"),
-        )
+    ALIVE_HTML_PATH = resolve_repo_path(
+        "STOA_ALIVE_HTML_PATH",
+        REPO_ROOT / "stoa_alive.html",
     )
     EDITABLE_EXTENSIONS = {
         ext.strip().lower()
