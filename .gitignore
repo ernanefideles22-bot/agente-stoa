@@ -6,8 +6,13 @@
 .venv/
 .tmp-edge-cdp/
 .test_tmp/
+.vscode/
+.stoa_backups/
 __pycache__/
 *.pyc
+.stoa_ops_log.jsonl
+.stoa_state.db
+stoa_memory_db/
 artifacts_ui_accept/
 data/
 workspace/
