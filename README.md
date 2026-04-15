@@ -262,7 +262,6 @@ python -m unittest tests.test_app
   - [docs/release-v1-closeout.md](C:/Users/ernan/OneDrive/Documentos/Playground/safe-stoa/docs/release-v1-closeout.md)
   - [docs/release-v1-pr.md](C:/Users/ernan/OneDrive/Documentos/Playground/safe-stoa/docs/release-v1-pr.md)
   - [docs/release-v1.1-hardening-backlog.md](C:/Users/ernan/OneDrive/Documentos/Playground/safe-stoa/docs/release-v1.1-hardening-backlog.md)
-  - [docs/release-v1-commit.txt](C:/Users/ernan/OneDrive/Documentos/Playground/safe-stoa/docs/release-v1-commit.txt)
 
 ## Fora do escopo da v1
 
