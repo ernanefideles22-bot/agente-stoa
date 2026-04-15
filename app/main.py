@@ -128,7 +128,7 @@ class Config:
     AVATAR_REFERENCE_PATH = Path(
         os.getenv(
             "STOA_AVATAR_REFERENCE_PATH",
-            r"C:\Users\ernan\Downloads\agente stoa\ChatGPT Image 2 de abr. de 2026, 20_42_15.png",
+            str(Path(__file__).resolve().parents[1] / "static" / "pwa-icons" / "icon-any.svg"),
         )
     )
     REMOTE_HTML_PATH = Path(

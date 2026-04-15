@@ -1,7 +1,8 @@
 @echo off
 setlocal
 
-set "PROJECT_ROOT=C:\Users\ernan\OneDrive\Documentos\Playground\safe-stoa"
+set "PROJECT_ROOT=%~dp0"
+if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
 set "PYTHONPATH=%PROJECT_ROOT%\.pydeps"
 set "PORT=18000"
 set "BIND_HOST=127.0.0.1"
