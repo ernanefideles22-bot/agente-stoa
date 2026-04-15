@@ -1,0 +1,132 @@
+<html>
+<head>
+  <title>STOA Control</title>
+  <hta:application
+    id="stoaControl"
+    applicationname="STOA Control"
+    border="thick"
+    caption="yes"
+    showintaskbar="yes"
+    singleinstance="yes"
+    sysmenu="yes"
+    windowstate="normal"
+  />
+  <meta http-equiv="x-ua-compatible" content="IE=9" />
+  <style>
+    body {
+      font-family: Segoe UI, Arial, sans-serif;
+      background: #0f1720;
+      color: #e6edf3;
+      margin: 0;
+      padding: 24px;
+    }
+    h1 { margin: 0 0 8px; }
+    p { color: #9fb3c8; margin: 0 0 16px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    button {
+      background: #1f6feb;
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.secondary { background: #238636; }
+    button.warn { background: #b54708; }
+    button.dark { background: #334155; }
+    #output {
+      white-space: pre-wrap;
+      background: #0b1220;
+      border: 1px solid #2f3d4f;
+      border-radius: 12px;
+      padding: 16px;
+      min-height: 260px;
+      overflow: auto;
+    }
+  </style>
+  <script language="javascript">
+    var shell = new ActiveXObject("WScript.Shell");
+    var projectRoot = "C:\\Users\\ernan\\OneDrive\\Documentos\\Playground\\safe-stoa";
+
+    function scriptPath(name) {
+      return projectRoot + "\\" + name;
+    }
+
+    function setOutput(text) {
+      document.getElementById("output").innerText = text;
+    }
+
+    function runScript(name, wait) {
+      var cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + scriptPath(name) + '"';
+      if (!wait) {
+        shell.Run(cmd, 0, false);
+        return "Executado: " + name;
+      }
+
+      var exec = shell.Exec(cmd);
+      while (exec.Status === 0) {}
+      var stdout = exec.StdOut.ReadAll();
+      var stderr = exec.StdErr.ReadAll();
+      return (stdout + "\n" + stderr).replace(/^\s+|\s+$/g, "");
+    }
+
+    function refreshStatus() {
+      var parts = [];
+      parts.push(runScript("status-stoa-supervisor.ps1", true));
+      parts.push(runScript("status-stoa-daemon.ps1", true));
+      parts.push(runScript("status-stoa-voice-daemon.ps1", true));
+      parts.push(runScript("status-stoa-tray.ps1", true));
+      setOutput(parts.join("\n"));
+    }
+
+    function invoke(name) {
+      try {
+        var result = runScript(name, true);
+        setOutput(result);
+        refreshStatus();
+      } catch (e) {
+        setOutput(String(e.message || e));
+      }
+    }
+
+    function openUi() {
+      shell.Run("http://127.0.0.1:18000", 1, false);
+      setOutput("Interface aberta em http://127.0.0.1:18000");
+    }
+
+    window.onload = function() {
+      refreshStatus();
+      window.resizeTo(900, 700);
+    };
+  </script>
+</head>
+<body>
+  <h1>STOA Control</h1>
+  <p>Painel simples para instalar, iniciar e acompanhar o STOA local.</p>
+
+  <div class="grid">
+    <button onclick="invoke('install-stoa.ps1')">Instalar STOA</button>
+    <button class="warn" onclick="invoke('uninstall-stoa.ps1')">Desinstalar STOA</button>
+    <button class="secondary" onclick="openUi()">Abrir Interface</button>
+    <button class="dark" onclick="refreshStatus()">Atualizar Status</button>
+
+    <button onclick="invoke('run-stoa-supervisor.ps1')">Iniciar Supervisor</button>
+    <button class="warn" onclick="invoke('stop-stoa-supervisor.ps1')">Parar Supervisor</button>
+    <button onclick="invoke('run-stoa-voice-daemon.ps1')">Iniciar Voz</button>
+    <button class="warn" onclick="invoke('stop-stoa-voice-daemon.ps1')">Parar Voz</button>
+
+    <button onclick="invoke('install-stoa-scheduled-task.ps1')">Instalar no Logon</button>
+    <button class="warn" onclick="invoke('remove-stoa-scheduled-task.ps1')">Remover do Logon</button>
+    <button onclick="invoke('install-stoa-control-shortcuts.ps1')">Criar Atalhos</button>
+    <button class="warn" onclick="invoke('remove-stoa-control-shortcuts.ps1')">Remover Atalhos</button>
+  </div>
+
+  <div id="output"></div>
+</body>
+</html>

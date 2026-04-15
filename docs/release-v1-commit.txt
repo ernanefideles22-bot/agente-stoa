@@ -1,0 +1,1 @@
+release(stoa): close v1 scope and finalize release documentation
