@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import secrets
 import json
 import csv
@@ -2297,16 +2298,20 @@ def model_json(
     session_id: Optional[str] = None,
 ) -> dict:
     raw = model_text(system, user_text, model=model, session_id=session_id)
-    cleaned = raw.strip()
 
-    if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        cleaned = cleaned.replace("json\n", "", 1).strip()
+    # 1) Try to pull JSON out of a ```json ... ``` block.
+    match = re.search(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", raw, re.DOTALL)
+    if match:
+        cleaned = match.group(1)
+    else:
+        # 2) Find the first { ... } or [ ... ] in the raw text.
+        match = re.search(r"(\{.*\}|\[.*\])", raw, re.DOTALL)
+        cleaned = match.group(1) if match else raw.strip()
 
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as exc:
-        raise RuntimeError(f"O modelo retornou JSON inválido: {exc}") from exc
+        raise RuntimeError(f"O modelo retornou JSON inválido: {exc}\nResposta bruta: {raw[:300]}") from exc
 
 
 def parse_coworker_intake(session_id: str, text: str, mode: str) -> dict:
@@ -2657,23 +2662,74 @@ def coworker_daily_report_text(session_id: str) -> str:
     return "\n".join(lines)
 
 
-def route_command(command: str) -> str:
+def route_command(command: str) -> str:  # noqa: PLR0911
     lowered = command.lower()
 
-    if any(term in lowered for term in ["clima", "tempo", "temperatura", "chuva", "umidade"]):
+    # ── Clima ──────────────────────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "clima", "tempo", "temperatura", "chuva", "umidade",
+        "previsão", "previsao", "vento", "chove", "vai chover",
+        "frio", "quente", "graus", "céu", "ceu", "nublado",
+    ]):
         return "weather"
-    if any(term in lowered for term in ["hora", "horário", "que horas", "data de hoje"]):
+
+    # ── Hora / Data ────────────────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "que horas", "que hora", "horário", "horario", "hora atual",
+        "data de hoje", "data atual", "dia de hoje", "hoje é", "hoje e",
+        "que dia é", "que dia e", "amanhã é", "amanha e",
+    ]):
         return "time"
-    if any(term in lowered for term in ["planeje", "agenda", "cronograma", "organize", "roteiro", "roadmap"]):
-        return "planning"
-    if any(term in lowered for term in ["website", "landing page", "html", "css", "site", "frontend"]):
+
+    # ── Frontend / Web ─────────────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "website", "landing page", "html", "css", "site", "frontend",
+        "react", "vue", "angular", "bootstrap", "tailwind",
+        "interface web", "página web", "pagina web", "ui component",
+    ]):
         return "web"
-    if any(term in lowered for term in ["explique", "como funciona", "tutorial", "ensine", "o que é"]):
-        return "education"
-    if any(term in lowered for term in ["estratégia", "analise", "análise", "plano", "milestone", "swot"]):
-        return "strategy"
-    if any(term in lowered for term in ["python", "javascript", "fastapi", "node", "código", "codigo", "program"]):
+
+    # ── Código / Programação ───────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "python", "javascript", "typescript", "fastapi", "node", "nodejs",
+        "código", "codigo", "program", "script",
+        "função", "funcao", "classe", "método", "metodo",
+        "bug", "debug", "erro no código", "refactor", "otimize",
+        "banco de dados", "database", "sql", "query", "algoritmo",
+        "docker", "deploy", "git ", "endpoint", "api rest",
+        "teste unitário", "teste automatizado",
+    ]):
         return "code"
+
+    # ── Planejamento / Gestão ──────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "planeje", "planejar", "agenda", "cronograma", "organize", "roteiro", "roadmap",
+        "sprint", "tarefa", "tarefas", "deadline", "backlog",
+        "reunião", "reuniao", "entrega", "milestone",
+        "gestão de", "gestao de", "prioridade das", "prioridades",
+    ]):
+        return "planning"
+
+    # ── Estratégia / Negócio ───────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "estratégia", "estrategia", "analise", "análise", "swot",
+        "plano de negócio", "plano de negocio",
+        "negócio", "negocio", "empresa", "mercado", "produto", "startup",
+        "concorrência", "concorrencia", "decisão", "decisao",
+        "investimento", "kpi", "métricas", "metricas", "okr", "priorizar",
+    ]):
+        return "strategy"
+
+    # ── Educação / Explicação ──────────────────────────────────────────────
+    if any(term in lowered for term in [
+        "explique", "como funciona", "tutorial", "ensine", "o que é", "o que e",
+        "aprenda", "aprender", "me ensine", "me explique",
+        "definição", "definicao", "o que são", "o que sao",
+        "diferença entre", "diferenca entre", "como usar",
+        "resumo de", "documentação", "documentacao",
+    ]):
+        return "education"
+
     return "info"
 
 
@@ -2791,7 +2847,12 @@ class StrategyAgent:
 class InfoAgent:
     @staticmethod
     async def answer(text: str, session_id: Optional[str] = None) -> str:
-        system = "Você é um assistente útil e conciso. Responda em português."
+        system = (
+            "Você é STOA, um assistente de trabalho inteligente. "
+            "Responda de forma direta, clara e sempre em português. "
+            "Quando a resposta tiver etapas, use uma lista numerada. "
+            "Ao final, sugira um próximo passo prático quando isso agregar valor."
+        )
         return model_text(system, text, session_id=session_id)
 
 
