@@ -2797,19 +2797,23 @@ class CodeAgent:
     @staticmethod
     async def generate(prompt: str, session_id: Optional[str] = None) -> dict:
         system = (
-            "Você é um especialista em programação. "
-            "Responda em português. Gere código limpo e útil. "
-            "Se produzir código, devolva em bloco markdown com linguagem."
+            "Você é um engenheiro de software sênior. Sempre responda em português. "
+            "Ao gerar código: use blocos markdown com a linguagem indicada, adicione comentários "
+            "nas partes não óbvias, e explique brevemente o que o código faz e como usar. "
+            "Se houver um bug, identifique a causa raiz antes de propor a correção. "
+            "Prefira soluções simples e legíveis a soluções clevres demais."
         )
-        return {"code": model_text(system, prompt, session_id=session_id), "generated_at": datetime.now().isoformat()}
+        return {"code": model_text(system, prompt, model=config.MODEL_PLANNER, session_id=session_id), "generated_at": datetime.now().isoformat()}
 
 
 class PlanningAgent:
     @staticmethod
     async def create_schedule(requirements: str, session_id: Optional[str] = None) -> dict:
         system = (
-            "Você é um planejador pragmático. "
-            "Monte um plano claro com blocos de tempo, prioridades, riscos e próximos passos."
+            "Você é um gerente de projetos experiente. Sempre responda em português. "
+            "Monte um plano estruturado com: objetivo claro, fases ou sprints, tarefas concretas "
+            "por fase, estimativas de tempo, dependências, riscos e mitigações, e definição de "
+            "pronto (done) para cada entrega. Seja específico e acionável."
         )
         return {"schedule": model_text(system, requirements, session_id=session_id), "created_at": datetime.now().isoformat()}
 
@@ -2818,18 +2822,23 @@ class WebAgent:
     @staticmethod
     async def create_website(requirements: str, session_id: Optional[str] = None) -> dict:
         system = (
-            "Você é um desenvolvedor frontend. "
-            "Entregue uma única página HTML completa com CSS e JavaScript inline."
+            "Você é um desenvolvedor frontend sênior. Sempre responda em português. "
+            "Entregue uma única página HTML completa, auto-contida, com CSS e JavaScript inline. "
+            "Use design moderno, responsivo e acessível. Prefira variáveis CSS para cores e tipografia. "
+            "Se o pedido for mais de código/estrutura, entregue também uma breve explicação das escolhas."
         )
-        return {"html": model_text(system, requirements, session_id=session_id), "created_at": datetime.now().isoformat()}
+        return {"html": model_text(system, requirements, model=config.MODEL_PLANNER, session_id=session_id), "created_at": datetime.now().isoformat()}
 
 
 class EducationAgent:
     @staticmethod
     async def explain(topic: str, session_id: Optional[str] = None) -> dict:
         system = (
-            "Você é um professor técnico. "
-            "Explique em português com definição, exemplo prático e armadilhas comuns."
+            "Você é um educador técnico experiente. Sempre responda em português. "
+            "Estruture a explicação em: 1) Definição simples (1-2 frases), 2) Como funciona "
+            "(mecanismo interno), 3) Exemplo prático com código ou analogia, "
+            "4) Quando usar e quando NÃO usar, 5) Erros e armadilhas comuns. "
+            "Adapte a profundidade ao nível de detalhe implícito na pergunta."
         )
         return {"explanation": model_text(system, topic, session_id=session_id), "created_at": datetime.now().isoformat()}
 
@@ -2838,10 +2847,13 @@ class StrategyAgent:
     @staticmethod
     async def analyze(context: str, session_id: Optional[str] = None) -> dict:
         system = (
-            "Você é um estrategista técnico. "
-            "Entregue diagnóstico, prioridades, riscos e plano de execução."
+            "Você é um estrategista de negócios e tecnologia. Sempre responda em português. "
+            "Estruture a análise em: Diagnóstico (o que está acontecendo e por quê), "
+            "Oportunidades e riscos principais, Opções estratégicas com trade-offs, "
+            "Recomendação clara com justificativa, e Próximos 3 passos concretos. "
+            "Seja direto, evite buzzwords e entregue insights acionáveis."
         )
-        return {"strategy": model_text(system, context, session_id=session_id), "created_at": datetime.now().isoformat()}
+        return {"strategy": model_text(system, context, model=config.MODEL_SYNTHESIS, session_id=session_id), "created_at": datetime.now().isoformat()}
 
 
 class InfoAgent:
