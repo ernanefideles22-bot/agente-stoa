@@ -17,7 +17,7 @@ def load_app_module():
     temp_root.mkdir(exist_ok=True)
     temp_dir = Path(tempfile.mkdtemp(prefix="safe-stoa-", dir=temp_root))
     os.environ["STOA_ACCESS_TOKEN"] = "test-token"
-    os.environ["OPENAI_API_KEY"] = "test-openai-key"
+    os.environ["ANTHROPIC_API_KEY"] = "test-anthropic-key"
     os.environ["SESSION_STORE_PATH"] = str(temp_dir / "sessions.json")
     os.environ["PREVIEW_STORE_PATH"] = str(temp_dir / "previews.json")
     os.environ["COWORKER_STORE_PATH"] = str(temp_dir / "coworker.json")

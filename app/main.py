@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request, WebSocket,
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
-from openai import OpenAI
+import anthropic
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 import uvicorn
@@ -42,7 +42,7 @@ def resolve_repo_path(env_name: str, default_path: Path) -> Path:
 
 
 class Config:
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+    ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
     OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "").strip()
     ACCESS_TOKEN = os.getenv("STOA_ACCESS_TOKEN", "").strip()
     PORT = int(os.getenv("PORT", "8000"))
@@ -56,11 +56,11 @@ class Config:
         for host in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
         if host.strip()
     ]
-    MODEL_ROUTER = os.getenv("OPENAI_ROUTER_MODEL", "gpt-4.1-mini")
-    MODEL_DEFAULT = os.getenv("OPENAI_DEFAULT_MODEL", "gpt-4.1-mini")
-    MODEL_PLANNER = os.getenv("OPENAI_PLANNER_MODEL", "gpt-4.1-mini")
-    MODEL_SYNTHESIS = os.getenv("OPENAI_SYNTHESIS_MODEL", "gpt-4.1-mini")
-    MODEL_AUTOPILOT = os.getenv("OPENAI_AUTOPILOT_MODEL", "gpt-4.1-mini")
+    MODEL_ROUTER = os.getenv("ANTHROPIC_ROUTER_MODEL", "claude-haiku-4-5-20251001")
+    MODEL_DEFAULT = os.getenv("ANTHROPIC_DEFAULT_MODEL", "claude-haiku-4-5-20251001")
+    MODEL_PLANNER = os.getenv("ANTHROPIC_PLANNER_MODEL", "claude-sonnet-4-6")
+    MODEL_SYNTHESIS = os.getenv("ANTHROPIC_SYNTHESIS_MODEL", "claude-sonnet-4-6")
+    MODEL_AUTOPILOT = os.getenv("ANTHROPIC_AUTOPILOT_MODEL", "claude-sonnet-4-6")
     MAX_PROMPT_CHARS = int(os.getenv("MAX_PROMPT_CHARS", "4000"))
     MAX_PLAN_STEPS = int(os.getenv("MAX_PLAN_STEPS", "4"))
     MAX_STEP_OUTPUT_CHARS = int(os.getenv("MAX_STEP_OUTPUT_CHARS", "1200"))
@@ -159,7 +159,7 @@ config = Config()
 if not config.ACCESS_TOKEN:
     raise ValueError("STOA_ACCESS_TOKEN não configurado.")
 
-client: Optional[OpenAI] = None
+client: Optional[anthropic.Anthropic] = None
 session_store: dict[str, list[dict]] = {}
 preview_store: dict[str, dict] = {}
 coworker_store: dict[str, dict[str, list[dict]]] = {}
@@ -2255,14 +2255,14 @@ def summarize_session_history(session_id: str) -> str:
     return "\n".join(lines)
 
 
-def get_openai_client() -> OpenAI:
+def get_anthropic_client() -> anthropic.Anthropic:
     global client
 
-    if not config.OPENAI_API_KEY or config.OPENAI_API_KEY == "COLE_SUA_OPENAI_API_KEY_AQUI":
-        raise HTTPException(status_code=503, detail="OPENAI_API_KEY não configurada no .env.safe.")
+    if not config.ANTHROPIC_API_KEY or config.ANTHROPIC_API_KEY == "COLE_SUA_ANTHROPIC_API_KEY_AQUI":
+        raise HTTPException(status_code=503, detail="ANTHROPIC_API_KEY não configurada no .env.safe.")
 
     if client is None:
-        client = OpenAI(api_key=config.OPENAI_API_KEY)
+        client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
 
     return client
 
@@ -2278,11 +2278,13 @@ def model_text(
         if history_text:
             system = f"{system}\n\nContexto recente da sessão:\n{history_text}"
 
-    response = get_openai_client().responses.create(
+    response = get_anthropic_client().messages.create(
         model=model or config.MODEL_DEFAULT,
-        input=build_messages(system, user_text),
+        max_tokens=2048,
+        system=system,
+        messages=[{"role": "user", "content": user_text}],
     )
-    text = (response.output_text or "").strip()
+    text = (response.content[0].text if response.content else "").strip()
     if not text:
         raise RuntimeError("A resposta do modelo veio vazia.")
     return text
@@ -3058,7 +3060,7 @@ load_coworker_store()
 
 app = FastAPI(
     title="Safe STOA Agent",
-    description="Versão endurecida do STOA Agent com OpenAI Responses API",
+    description="Versão endurecida do STOA Agent com Anthropic Claude API",
     version="2.0.0",
 )
 
