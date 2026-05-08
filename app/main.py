@@ -595,9 +595,10 @@ def load_preview_store() -> None:
             for session_id, preview in raw.items():
                 if isinstance(session_id, str) and isinstance(preview, dict):
                     try:
+                        # session_id pode já estar no dict (de model_dump); garante
+                        # que o valor correto da chave do store prevalece.
                         normalized[session_id] = PendingPreview(
-                            session_id=session_id,
-                            **preview,
+                            **{**preview, "session_id": session_id}
                         ).model_dump()
                     except Exception:
                         continue
@@ -3465,7 +3466,10 @@ async def startup_event() -> None:
 async def add_security_headers(request: Request, call_next):
     authorization = request.headers.get("Authorization", "")
     if request.url.path.startswith("/api/") and request.url.path != "/api/health":
-        check_rate_limit(request, authorization)
+        try:
+            check_rate_limit(request, authorization)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
