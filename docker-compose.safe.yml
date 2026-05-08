@@ -8,6 +8,10 @@ services:
       - ./.env.safe
     ports:
       - "127.0.0.1:${HOST_PORT:-18000}:8000"
+    volumes:
+      - stoa-data:/app/data
+      - stoa-logs:/app/logs
+      - stoa-workspace:/app/workspace
     read_only: true
     tmpfs:
       - /tmp:size=64m,noexec,nosuid,nodev
@@ -25,3 +29,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+volumes:
+  stoa-data:
+  stoa-logs:
+  stoa-workspace:

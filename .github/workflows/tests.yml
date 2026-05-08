@@ -1,0 +1,28 @@
+name: Testes
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: |
+          pip install -r requirements.safe.txt
+          pip install -r requirements.dev.txt
+
+      - name: Rodar testes com cobertura
+        run: |
+          pytest tests/ -v --cov=app --cov-report=term-missing --cov-fail-under=20
