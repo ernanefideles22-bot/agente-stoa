@@ -3476,15 +3476,16 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    if request.url.path in {"/stoa_remote.html", "/stoa_alive.html", "/static/stoa_mobile.html"}:
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; "
-            "connect-src 'self' https: http://127.0.0.1:18000 ws: wss:; "
-            "img-src 'self' data: https:; "
-            "font-src 'self' https://fonts.gstatic.com data:; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;"
-        )
+    external_csp = (
+        "default-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://fonts.gstatic.com; "
+        "connect-src 'self' https: http://127.0.0.1:18000 ws: wss:; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https://fonts.gstatic.com data:; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;"
+    )
+    if request.url.path in {"/", "/stoa_remote.html", "/stoa_alive.html", "/static/stoa_mobile.html"}:
+        response.headers["Content-Security-Policy"] = external_csp
     else:
         response.headers["Content-Security-Policy"] = "default-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:;"
     return response
@@ -5073,2265 +5074,392 @@ async def avatar_reference_endpoint() -> FileResponse:
     return FileResponse(avatar_path)
 
 
+
 FRONTEND_HTML = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Safe STOA Agent</title>
-  <meta name="theme-color" content="#06111d">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/static/pwa-icons/icon-any.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/static/pwa-icons/icon-any.svg">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      color: #e8eef5;
-      min-height: 100vh;
-      background:
-        radial-gradient(circle at 50% 18%, rgba(92, 169, 255, 0.22), transparent 22%),
-        radial-gradient(circle at 50% 58%, rgba(92, 169, 255, 0.08), transparent 28%),
-        linear-gradient(180deg, #020812 0%, #07111d 38%, #050b14 100%);
-      overflow-x: hidden;
-    }
-    body::before,
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-    body::before {
-      background:
-        radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.18) 0 1px, transparent 1px 100%),
-        radial-gradient(circle at 70% 18%, rgba(146, 210, 255, 0.12) 0 1px, transparent 1px 100%),
-        radial-gradient(circle at 82% 72%, rgba(146, 210, 255, 0.12) 0 1px, transparent 1px 100%);
-      background-size: 180px 180px, 240px 240px, 300px 300px;
-      opacity: 0.35;
-    }
-    body::after {
-      background:
-        linear-gradient(90deg, transparent 49.5%, rgba(92, 169, 255, 0.18) 50%, transparent 50.5%),
-        linear-gradient(180deg, transparent 0%, rgba(92, 169, 255, 0.12) 48%, transparent 100%);
-      background-size: 100% 100%, 100% 100%;
-      opacity: 0.18;
-    }
-    #stars {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      pointer-events: none;
-    }
-    .setup-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 3;
-      display: grid;
-      place-items: center;
-      background: rgba(0, 0, 0, 0.9);
-      backdrop-filter: blur(18px);
-    }
-    .setup-overlay.hidden {
-      display: none;
-    }
-    .setup-card {
-      width: min(92vw, 360px);
-      display: grid;
-      gap: 14px;
-      justify-items: center;
-      padding: 24px 20px;
-      border-radius: 18px;
-      border: 1px solid rgba(103, 182, 255, 0.12);
-      background: rgba(5, 13, 24, 0.72);
-      box-shadow: 0 0 48px rgba(64, 148, 220, 0.12);
-    }
-    .setup-card h2 {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.36em;
-      text-transform: uppercase;
-      color: rgba(218, 240, 255, 0.72);
-    }
-    .setup-card p {
-      font-size: 11px;
-      line-height: 1.6;
-      letter-spacing: 0.08em;
-      text-align: center;
-      color: rgba(194, 224, 246, 0.52);
-    }
-    .setup-card input {
-      text-align: center;
-      letter-spacing: 0.14em;
-      background: rgba(7, 16, 29, 0.22);
-    }
-    .setup-card button {
-      width: auto;
-      min-width: 150px;
-      padding: 10px 18px;
-      background: rgba(7, 16, 29, 0.2);
-      border-color: rgba(103, 182, 255, 0.12);
-    }
-    .shell {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      width: min(100%, 1320px);
-      margin: 0 auto;
-      padding: 22px 24px 20px;
-      display: grid;
-      grid-template-rows: 1fr auto auto;
-      gap: 8px;
-    }
-    .presence {
-      display: grid;
-      align-items: center;
-      justify-items: center;
-      gap: 10px;
-      padding-top: 0;
-    }
-    .presence-status {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 3px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(116, 185, 255, 0.08);
-      background: rgba(7, 17, 29, 0.08);
-      backdrop-filter: blur(4px);
-      color: rgba(215, 235, 250, 0.18);
-      font-size: 7px;
-      font-weight: 600;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      opacity: 0.4;
-    }
-    .avatar-stage {
-      position: relative;
-      width: min(100%, 760px);
-      min-height: 62vh;
-      display: grid;
-      place-items: center;
-    }
-    .avatar-stage::before {
-      content: '';
-      position: absolute;
-      inset: 6% 14%;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(80, 176, 255, 0.16), transparent 68%);
-      filter: blur(20px);
-      opacity: 0.9;
-    }
-    .avatar-shell {
-      position: relative;
-      width: min(62vw, 540px);
-      aspect-ratio: 0.666;
-      display: grid;
-      place-items: center;
-      isolation: isolate;
-    }
-    .avatar-image {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      object-position: center top;
-      border-radius: 0;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 3;
-      filter: brightness(0.98) contrast(1.02) saturate(1.02);
-      transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
-    }
-    .avatar-shell.has-reference .avatar-image {
-      opacity: 0.98;
-    }
-    .avatar-shell.has-reference .avatar-face,
-    .avatar-shell.has-reference .avatar-neck,
-    .avatar-shell.has-reference .entity-wings {
-      opacity: 0;
-      filter: blur(10px);
-    }
-    .avatar-shell.has-reference::before {
-      opacity: 0.14;
-      filter: blur(24px);
-    }
-    .avatar-shell.has-reference::after {
-      z-index: 4;
-      opacity: 0.82;
-    }
-    .avatar-glow {
-      position: absolute;
-      inset: 2% 6% 4%;
-      border-radius: 44% 44% 36% 36% / 18% 18% 62% 62%;
-      background:
-        radial-gradient(circle at 50% 12%, rgba(210, 240, 255, 0.24), transparent 18%),
-        radial-gradient(circle at 50% 34%, rgba(102, 196, 255, 0.18), transparent 30%),
-        radial-gradient(circle at 50% 62%, rgba(95, 190, 255, 0.2), transparent 38%),
-        radial-gradient(circle at 50% 92%, rgba(95, 190, 255, 0.18), transparent 18%);
-      filter: blur(10px);
-      opacity: 0.72;
-      transform: scale(0.98);
-      transition: opacity 200ms ease, transform 200ms ease, filter 200ms ease, box-shadow 200ms ease;
-    }
-    .avatar-shell::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 46% 46% 42% 42% / 18% 18% 60% 60%;
-      background:
-        radial-gradient(circle at 50% 8%, rgba(180, 227, 255, 0.12), transparent 14%),
-        linear-gradient(180deg, transparent 0 8%, rgba(96, 189, 255, 0.12) 8% 10%, transparent 10% 84%, rgba(96, 189, 255, 0.14) 84% 90%, transparent 90%),
-        radial-gradient(circle at 50% 48%, rgba(84, 180, 255, 0.12), transparent 36%),
-        radial-gradient(circle at 50% 98%, rgba(84, 180, 255, 0.15), transparent 16%);
-      filter: blur(14px);
-      opacity: 0.82;
-      z-index: 0;
-    }
-    .avatar-shell::after {
-      content: '';
-      position: absolute;
-      top: 4%;
-      bottom: 2%;
-      left: 50%;
-      width: 2px;
-      transform: translateX(-50%);
-      background: linear-gradient(180deg, transparent, rgba(116, 200, 255, 0.85) 18%, rgba(220, 244, 255, 1) 48%, rgba(116, 200, 255, 0.85) 78%, transparent);
-      box-shadow: 0 0 18px rgba(102, 195, 255, 0.85);
-      opacity: 0.9;
-      z-index: 1;
-      transition: opacity 180ms ease, box-shadow 180ms ease, width 180ms ease, filter 180ms ease;
-    }
-    .avatar-face {
-      position: relative;
-      width: 70%;
-      height: 79%;
-      z-index: 2;
-      border-radius: 40% 40% 46% 46% / 16% 16% 66% 66%;
-      background:
-        linear-gradient(180deg, rgba(245, 251, 255, 0.98) 0%, rgba(204, 234, 255, 0.96) 18%, rgba(135, 191, 235, 0.84) 36%, rgba(63, 122, 178, 0.74) 64%, rgba(18, 45, 78, 0.5) 100%);
-      box-shadow:
-        inset 0 0 54px rgba(10, 40, 74, 0.54),
-        inset 0 -18px 28px rgba(5, 21, 39, 0.42),
-        0 0 42px rgba(104, 190, 255, 0.18);
-      overflow: hidden;
-      clip-path: polygon(50% 0, 61% 5%, 74% 11%, 88% 20%, 98% 35%, 100% 45%, 96% 58%, 89% 70%, 78% 80%, 65% 90%, 50% 100%, 35% 90%, 22% 80%, 11% 70%, 4% 58%, 0 45%, 2% 35%, 12% 20%, 26% 11%, 39% 5%);
-    }
-    .avatar-face::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(90deg, transparent 49.2%, rgba(215, 244, 255, 0.36) 49.4%, rgba(111, 202, 255, 0.62) 50%, rgba(215, 244, 255, 0.36) 50.6%, transparent 50.8%),
-        linear-gradient(180deg, transparent 0 13%, rgba(91, 184, 255, 0.22) 13% 14%, transparent 14% 38%, rgba(91, 184, 255, 0.18) 38% 39%, transparent 39% 64%, rgba(91, 184, 255, 0.2) 64% 65%, transparent 65% 100%),
-        linear-gradient(126deg, transparent 0 18%, rgba(94, 184, 255, 0.26) 18% 19.4%, transparent 19.4% 34%, rgba(94, 184, 255, 0.18) 34% 35.2%, transparent 35.2% 100%),
-        linear-gradient(234deg, transparent 0 18%, rgba(94, 184, 255, 0.26) 18% 19.4%, transparent 19.4% 34%, rgba(94, 184, 255, 0.18) 34% 35.2%, transparent 35.2% 100%);
-      opacity: 0.98;
-      mix-blend-mode: screen;
-      transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
-    }
-    .avatar-face::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(circle at 50% 18%, rgba(255, 255, 255, 0.22), transparent 12%),
-        radial-gradient(circle at 50% 44%, rgba(255, 255, 255, 0.12), transparent 18%),
-        linear-gradient(180deg, rgba(255,255,255,0.2), transparent 18%, transparent 54%, rgba(39, 88, 136, 0.4)),
-        linear-gradient(150deg, transparent 0 32%, rgba(255,255,255,0.08) 32% 36%, transparent 36% 100%),
-        linear-gradient(210deg, transparent 0 32%, rgba(255,255,255,0.08) 32% 36%, transparent 36% 100%);
-      opacity: 0.92;
-      transition: opacity 180ms ease, filter 180ms ease;
-    }
-    .avatar-crown {
-      position: absolute;
-      top: 5%;
-      left: 50%;
-      width: 19%;
-      height: 19%;
-      transform: translateX(-50%) rotate(45deg);
-      border-radius: 12px;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(243, 250, 255, 1) 0 24%, rgba(154, 220, 255, 0.98) 24% 48%, rgba(54, 115, 170, 0.96) 48% 100%);
-      box-shadow: 0 0 34px rgba(127, 211, 255, 0.82), inset 0 0 10px rgba(255,255,255,0.34);
-      z-index: 4;
-      transition: box-shadow 180ms ease, transform 180ms ease, filter 180ms ease, opacity 180ms ease;
-    }
-    .avatar-crown::before,
-    .avatar-crown::after {
-      content: '';
-      position: absolute;
-      inset: 18%;
-      border-radius: 8px;
-      border: 1px solid rgba(226, 246, 255, 0.7);
-      box-shadow: 0 0 12px rgba(157, 226, 255, 0.5);
-    }
-    .avatar-crown::after {
-      inset: auto 50% -118%;
-      width: 2px;
-      height: 122%;
-      transform: translateX(-50%);
-      border: none;
-      border-radius: 999px;
-      background: linear-gradient(180deg, rgba(216, 245, 255, 0.84), rgba(90, 185, 255, 0.5), transparent);
-      box-shadow: 0 0 14px rgba(126, 211, 255, 0.62);
-    }
-    .avatar-eye {
-      position: absolute;
-      top: 34.5%;
-      width: 22%;
-      height: 5%;
-      border-radius: 999px;
-      background:
-        linear-gradient(90deg, rgba(255,255,255,0), rgba(230,247,255,0.94) 34%, rgba(159,229,255,1) 50%, rgba(230,247,255,0.94) 66%, rgba(255,255,255,0)),
-        linear-gradient(180deg, rgba(255,255,255,0.2), rgba(114, 203, 255, 0.86));
-      box-shadow: 0 0 20px rgba(111, 214, 255, 0.9), 0 0 8px rgba(225,245,255,0.6);
-      z-index: 4;
-      transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
-    }
-    .avatar-eye.left {
-      left: 12%;
-      transform: skewX(-28deg) rotate(-4deg);
-      clip-path: polygon(0 72%, 12% 44%, 32% 18%, 100% 30%, 84% 76%, 52% 100%, 18% 88%);
-    }
-    .avatar-eye.right {
-      right: 12%;
-      transform: skewX(28deg) rotate(4deg);
-      clip-path: polygon(0 30%, 68% 18%, 88% 44%, 100% 72%, 82% 88%, 48% 100%, 16% 76%);
-    }
-    .avatar-mouth {
-      position: absolute;
-      left: 50%;
-      bottom: 20%;
-      width: 18%;
-      height: 5.4%;
-      transform: translateX(-50%);
-      border-radius: 0 0 16px 16px;
-      border: 2px solid rgba(150, 218, 255, 0.54);
-      border-top: 0;
-      z-index: 4;
-      box-shadow: 0 0 12px rgba(106, 198, 255, 0.26);
-      transition: height 180ms ease, width 180ms ease, transform 180ms ease;
-    }
-    .avatar-neck {
-      position: absolute;
-      bottom: -11%;
-      left: 50%;
-      width: 30%;
-      height: 38%;
-      transform: translateX(-50%);
-      background:
-        linear-gradient(180deg, rgba(235, 247, 255, 0.2), rgba(83, 156, 216, 0.38) 18%, rgba(36, 87, 135, 0.9) 100%);
-      clip-path: polygon(32% 0, 44% 12%, 56% 12%, 68% 0, 82% 18%, 76% 100%, 24% 100%, 18% 18%);
-      z-index: 1;
-      opacity: 0.9;
-      transition: box-shadow 180ms ease, opacity 180ms ease, transform 180ms ease, filter 180ms ease;
-    }
-    .entity-wings {
-      position: absolute;
-      inset: 8% -10% 18%;
-      z-index: 1;
-      opacity: 0.72;
-      transition: opacity 180ms ease, transform 180ms ease, filter 180ms ease;
-    }
-    .entity-wings::before,
-    .entity-wings::after {
-      content: '';
-      position: absolute;
-      top: 8%;
-      width: 37%;
-      height: 68%;
-      border-top: 2px solid rgba(174, 224, 255, 0.62);
-      border-left: 2px solid rgba(125, 198, 255, 0.22);
-      border-right: 2px solid rgba(125, 198, 255, 0.22);
-      box-shadow:
-        0 0 26px rgba(84, 170, 255, 0.16),
-        inset 0 0 18px rgba(84, 170, 255, 0.06);
-      background:
-        linear-gradient(115deg, transparent 0 16%, rgba(104, 194, 255, 0.2) 16% 17%, transparent 17% 33%, rgba(104, 194, 255, 0.12) 33% 34%, transparent 34% 100%);
-    }
-    .entity-wings::before {
-      left: 0;
-      transform: skewY(-14deg) rotate(-8deg);
-      clip-path: polygon(10% 0, 100% 12%, 86% 28%, 100% 46%, 84% 60%, 100% 100%, 0 72%, 18% 40%, 10% 16%);
-    }
-    .entity-wings::after {
-      right: 0;
-      transform: scaleX(-1) skewY(-14deg) rotate(-8deg);
-      clip-path: polygon(10% 0, 100% 12%, 86% 28%, 100% 46%, 84% 60%, 100% 100%, 0 72%, 18% 40%, 10% 16%);
-    }
-    .presence-feedback {
-      width: min(100%, 880px);
-      margin-top: -18px;
-      display: grid;
-      gap: 4px;
-      justify-items: center;
-    }
-    .status-copy {
-      color: rgba(220, 239, 252, 0.54);
-      font-size: 12px;
-      letter-spacing: 0.18em;
-      text-transform: lowercase;
-      text-align: center;
-      min-height: 16px;
-      max-width: 520px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .feedback-metrics {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-    .metric-inline {
-      display: inline-flex;
-      gap: 6px;
-      align-items: baseline;
-      color: rgba(186, 213, 233, 0.52);
-    }
-    .metric-label {
-      color: rgba(131, 159, 183, 0.48);
-      font-size: 8px;
-    }
-    .metric-value {
-      font-size: 9px;
-      color: rgba(223, 244, 255, 0.72);
-      font-weight: 600;
-      word-break: break-word;
-    }
-    .interaction-layer {
-      width: min(100%, 640px);
-      margin: -20px auto 0;
-      padding: 0;
-      background: transparent;
-      border: none;
-      box-shadow: none;
-      backdrop-filter: none;
-      display: grid;
-      gap: 8px;
-    }
-    .command-line {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 0;
-      align-items: center;
-      padding: 0;
-      border: none;
-      background: transparent;
-    }
-    .voice-dock {
-      display: grid;
-      justify-items: center;
-      gap: 10px;
-      min-height: 40px;
-    }
-    .waveform {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      min-height: 18px;
-      padding: 0 4px;
-      border-radius: 999px;
-      background: transparent;
-      border: none;
-    }
-    .waveform span {
-      width: 6px;
-      height: 14px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, #9fe5ff, #2f85cf);
-      opacity: 0.36;
-      transform-origin: center bottom;
-      animation: waveformIdle 1.8s infinite ease-in-out;
-      animation-delay: calc(var(--bar) * 120ms);
-    }
-    .avatar-shell[data-state="listening"] ~ .presence-feedback .waveform span,
-    .interaction-layer[data-state="listening"] .waveform span {
-      animation: waveformLive 0.85s infinite ease-in-out;
-      opacity: 0.95;
-    }
-    input, textarea, button, select {
-      width: 100%;
-      border-radius: 999px;
-      border: 1px solid rgba(103, 182, 255, 0.08);
-      background: rgba(7, 16, 29, 0.24);
-      color: #e8eef5;
-      padding: 10px 14px;
-      font: inherit;
-    }
-    textarea {
-      min-height: 42px;
-      max-height: 42px;
-      resize: none;
-    }
-    button {
-      border: 1px solid rgba(103, 182, 255, 0.08);
-      cursor: pointer;
-      font-weight: 600;
-      background: rgba(10, 24, 42, 0.48);
-      color: #f6fbff;
-      box-shadow: none;
-      text-transform: lowercase;
-      letter-spacing: 0.1em;
-    }
-    #voiceStartBtn,
-    #voiceStopBtn,
-    #send {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-      color: transparent;
-      text-indent: -9999px;
-      pointer-events: none;
-      opacity: 0;
-      box-shadow: none;
-      background: transparent;
-    }
-    #prompt {
-      min-height: 44px;
-      max-height: 88px;
-      padding: 12px 16px;
-      text-align: center;
-      background: rgba(7, 16, 29, 0.08);
-      border-color: rgba(103, 182, 255, 0.04);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.01);
-      color: rgba(233, 245, 255, 0.82);
-      letter-spacing: 0.06em;
-    }
-    #prompt::placeholder {
-      color: rgba(182, 212, 235, 0.4);
-    }
-    .command-grid {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: end;
-    }
-    .command-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-    .compact-toggles {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: center;
-      color: rgba(159, 179, 200, 0.28);
-      font-size: 10px;
-      opacity: 0.28;
-    }
-    .compact-toggles label {
-      display: inline-flex;
-      gap: 6px;
-      align-items: center;
-      padding: 2px 0;
-      border-radius: 999px;
-      background: transparent;
-      border: none;
-    }
-    .compact-toggles input {
-      width: auto;
-      padding: 0;
-    }
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .output-feed {
-      min-height: 18px;
-      max-height: 22px;
-      overflow: hidden;
-      padding: 0;
-      border-radius: 0;
-      background: transparent;
-      border: none;
-      color: rgba(220, 239, 252, 0.56);
-      font-size: 11px;
-      line-height: 1.4;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      text-align: center;
-      letter-spacing: 0.14em;
-      text-transform: lowercase;
-    }
-    .preview-panel {
-      width: min(100%, 640px);
-      margin: 2px auto 0;
-      padding: 12px 14px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 198, 105, 0.18);
-      background: rgba(20, 18, 10, 0.42);
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
-      display: grid;
-      gap: 10px;
-    }
-    .preview-panel.hidden {
-      display: none;
-    }
-    .preview-panel[data-kind="error"] {
-      border-color: rgba(255, 122, 122, 0.22);
-      background: rgba(26, 12, 12, 0.42);
-    }
-    .preview-meta {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      text-transform: lowercase;
-      letter-spacing: 0.16em;
-    }
-    .preview-title {
-      color: rgba(255, 222, 173, 0.92);
-      font-size: 10px;
-      font-weight: 600;
-    }
-    .preview-module {
-      color: rgba(255, 222, 173, 0.68);
-      font-size: 9px;
-    }
-    .preview-text {
-      color: rgba(235, 239, 244, 0.82);
-      font-size: 11px;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .preview-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-    .preview-actions button {
-      width: auto;
-      min-width: 108px;
-      padding: 9px 14px;
-      letter-spacing: 0.14em;
-    }
-    .preview-actions button:disabled {
-      opacity: 0.48;
-      cursor: default;
-    }
-    .scene-hint {
-      text-align: center;
-      font-size: 10px;
-      letter-spacing: 0.26em;
-      text-transform: uppercase;
-      color: rgba(176, 210, 236, 0.22);
-      user-select: none;
-    }
-    .ops-config {
-      display: grid;
-      gap: 10px;
-      margin-bottom: 16px;
-      padding-bottom: 14px;
-      border-bottom: 1px solid rgba(103, 182, 255, 0.06);
-    }
-    .ops-layer {
-      width: min(100%, 1180px);
-      margin: 0 auto;
-      opacity: 0.05;
-      transition: opacity 180ms ease;
-    }
-    .ops-layer:hover,
-    .ops-drawer[open] { opacity: 1; }
-    .ops-drawer {
-      border-radius: 18px;
-      background: rgba(5, 13, 24, 0.06);
-      border: 1px solid rgba(103, 182, 255, 0.04);
-      box-shadow: none;
-      overflow: hidden;
-    }
-    .ops-drawer summary {
-      list-style: none;
-      cursor: pointer;
-      padding: 10px 12px;
-      color: rgba(214, 235, 250, 0.18);
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.28em;
-      text-transform: uppercase;
-    }
-    .ops-drawer summary::-webkit-details-marker { display: none; }
-    .ops-content {
-      padding: 0 18px 18px;
-    }
-    .ops-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      align-items: start;
-    }
-    .row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .panel {
-      background: rgba(7, 16, 29, 0.9);
-      border: 1px solid rgba(103, 182, 255, 0.12);
-      border-radius: 18px;
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-    .panel h2 {
-      margin: 0 0 12px;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #9fb3c8;
-    }
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-    }
-    .toolbar button {
-      width: auto;
-      padding: 10px 12px;
-      font-size: 12px;
-      box-shadow: none;
-    }
-    .list {
-      display: grid;
-      gap: 8px;
-      max-height: 240px;
-      overflow: auto;
-    }
-    .item {
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(103, 182, 255, 0.1);
-      cursor: pointer;
-      font-size: 13px;
-    }
-    .item:hover {
-      border-color: rgba(103, 182, 255, 0.32);
-    }
-    .muted { color: #9fb3c8; font-size: 12px; }
-    .hint { color: #9fb3c8; font-size: 13px; }
-    .split {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    .avatar-shell[data-state="idle"] .avatar-glow {
-      opacity: 0.34;
-      transform: scale(0.97);
-      filter: blur(8px);
-      animation: idleBreath 5.2s infinite ease-in-out;
-    }
-    .avatar-shell[data-state="idle"] .avatar-eye {
-      opacity: 0.72;
-      box-shadow: 0 0 14px rgba(111, 214, 255, 0.46);
-    }
-    .avatar-shell[data-state="idle"] .avatar-crown {
-      opacity: 0.72;
-      filter: saturate(0.9);
-    }
-    .avatar-shell[data-state="idle"] .entity-wings {
-      opacity: 0.3;
-      transform: scale(0.98);
-      filter: blur(1px);
-    }
-    .avatar-shell.has-reference[data-state="idle"] .avatar-image {
-      filter: brightness(0.96) contrast(1.02) saturate(1.01);
-      transform: scale(1);
-    }
-    .avatar-shell[data-state="listening"] .avatar-glow {
-      opacity: 0.98;
-      transform: scale(1.06);
-      filter: blur(2px);
-      animation: listeningPulse 0.82s infinite ease-in-out;
-      box-shadow: 0 0 34px rgba(124, 215, 255, 0.56);
-    }
-    .avatar-shell[data-state="listening"] .avatar-eye {
-      opacity: 1;
-      transform: scaleY(0.72) scaleX(1.08);
-      box-shadow: 0 0 34px rgba(137, 232, 255, 1);
-    }
-    .avatar-shell[data-state="listening"] .avatar-crown {
-      animation: listeningCrown 0.82s infinite ease-in-out;
-    }
-    .avatar-shell[data-state="listening"] .entity-wings {
-      opacity: 0.78;
-      filter: drop-shadow(0 0 16px rgba(103, 182, 255, 0.28));
-    }
-    .avatar-shell.has-reference[data-state="listening"] .avatar-image {
-      filter: brightness(1) contrast(1.06) saturate(1.08);
-      transform: scale(1.006);
-    }
-    .avatar-shell[data-state="thinking"] .avatar-crown,
-    .avatar-shell[data-state="confirming"] .avatar-crown,
-    .avatar-shell[data-state="executing"] .avatar-crown,
-    .avatar-shell[data-state="responding"] .avatar-crown {
-      animation: crownPulse 1.2s infinite ease-in-out;
-    }
-    .avatar-shell[data-state="confirming"] .avatar-glow {
-      opacity: 0.72;
-      transform: scale(1.01);
-      filter: blur(3px);
-      box-shadow: 0 0 28px rgba(255, 198, 105, 0.28);
-    }
-    .avatar-shell[data-state="confirming"]::after {
-      opacity: 0.9;
-      box-shadow: 0 0 24px rgba(255, 214, 145, 0.92);
-    }
-    .avatar-shell.has-reference[data-state="confirming"] .avatar-image {
-      filter: brightness(0.99) contrast(1.08) saturate(1.06);
-      transform: scale(1.004);
-    }
-    .avatar-shell[data-state="thinking"] .avatar-glow {
-      opacity: 0.48;
-      transform: scale(0.99);
-      filter: blur(5px);
-      box-shadow: none;
-    }
-    .avatar-shell[data-state="thinking"]::after {
-      opacity: 1;
-      width: 3px;
-      animation: beamScan 1.05s infinite linear;
-      box-shadow: 0 0 26px rgba(214, 244, 255, 1);
-    }
-    .avatar-shell[data-state="thinking"] .avatar-eye {
-      transform: scaleY(0.42) scaleX(0.92);
-      opacity: 0.62;
-      box-shadow: 0 0 10px rgba(119, 208, 255, 0.44);
-    }
-    .avatar-shell[data-state="thinking"] .avatar-face::before {
-      opacity: 1;
-      animation: internalProcess 1.1s infinite linear;
-      filter: brightness(1.16);
-    }
-    .avatar-shell[data-state="thinking"] .entity-wings {
-      opacity: 0.24;
-      filter: blur(2px);
-    }
-    .avatar-shell.has-reference[data-state="thinking"] .avatar-image {
-      filter: brightness(0.95) contrast(1.1) saturate(1.04);
-      transform: scale(1.004);
-    }
-    .avatar-shell[data-state="executing"] .avatar-glow {
-      opacity: 1;
-      transform: scale(1.1);
-      filter: blur(1px);
-      animation: executionPulse 0.72s infinite ease-in-out;
-      box-shadow: 0 0 44px rgba(104, 199, 255, 0.62);
-    }
-    .avatar-shell[data-state="executing"]::after {
-      opacity: 1;
-      width: 4px;
-      animation: executionBeam 0.58s infinite ease-in-out;
-      box-shadow: 0 0 34px rgba(214, 244, 255, 1);
-    }
-    .avatar-shell[data-state="executing"] .avatar-eye {
-      opacity: 1;
-      transform: scaleY(0.82) scaleX(1.14);
-      box-shadow: 0 0 36px rgba(166, 239, 255, 1);
-    }
-    .avatar-shell[data-state="executing"] .avatar-neck {
-      box-shadow: 0 0 38px rgba(114, 208, 255, 0.62);
-      filter: brightness(1.15);
-      animation: neckCurrent 0.58s infinite ease-in-out;
-    }
-    .avatar-shell[data-state="executing"] .entity-wings {
-      opacity: 0.96;
-      animation: wingCharge 0.72s infinite ease-in-out;
-      filter: drop-shadow(0 0 20px rgba(97, 185, 255, 0.32));
-    }
-    .avatar-shell.has-reference[data-state="executing"] .avatar-image {
-      filter: brightness(1.03) contrast(1.12) saturate(1.1);
-      transform: scale(1.01);
-    }
-    .avatar-shell[data-state="responding"] .avatar-glow {
-      opacity: 0.82;
-      transform: scale(1.03);
-      filter: blur(3px);
-      animation: responseHalo 1.2s infinite ease-in-out;
-    }
-    .avatar-shell[data-state="responding"]::after {
-      opacity: 0.82;
-      width: 2px;
-      animation: none;
-      box-shadow: 0 0 20px rgba(160, 232, 255, 0.86);
-    }
-    .avatar-shell[data-state="responding"] .avatar-mouth {
-      width: 24%;
-      height: 8.5%;
-      animation: responseSpeak 0.42s infinite ease-in-out;
-      box-shadow: 0 0 22px rgba(144, 227, 255, 0.38);
-    }
-    .avatar-shell[data-state="responding"] .avatar-eye {
-      opacity: 1;
-      transform: scaleY(0.9);
-      box-shadow: 0 0 28px rgba(161, 238, 255, 1);
-    }
-    .avatar-shell[data-state="responding"] .entity-wings {
-      opacity: 0.58;
-      filter: drop-shadow(0 0 12px rgba(114, 204, 255, 0.2));
-    }
-    .avatar-shell.has-reference[data-state="responding"] .avatar-image {
-      filter: brightness(1.01) contrast(1.08) saturate(1.08);
-      transform: scale(1.006);
-    }
-    @keyframes idleBreath {
-      0%, 100% { transform: scale(0.97); opacity: 0.32; }
-      50% { transform: scale(1.01); opacity: 0.42; }
-    }
-    @keyframes waveformIdle {
-      0%, 100% { transform: scaleY(0.8); opacity: 0.28; }
-      50% { transform: scaleY(1.2); opacity: 0.44; }
-    }
-    @keyframes waveformLive {
-      0%, 100% { transform: scaleY(0.7); }
-      50% { transform: scaleY(2.2); }
-    }
-    @keyframes listeningPulse {
-      0%, 100% { transform: scale(1.01); opacity: 0.82; }
-      50% { transform: scale(1.08); opacity: 1; }
-    }
-    @keyframes listeningCrown {
-      0%, 100% { transform: translateX(-50%) rotate(45deg) scale(1); box-shadow: 0 0 24px rgba(127, 211, 255, 0.72); }
-      50% { transform: translateX(-50%) rotate(45deg) scale(1.12); box-shadow: 0 0 40px rgba(190, 241, 255, 1); }
-    }
-    @keyframes crownPulse {
-      0%, 100% { transform: translateX(-50%) rotate(45deg) scale(1); box-shadow: 0 0 18px rgba(127, 211, 255, 0.7); }
-      50% { transform: translateX(-50%) rotate(45deg) scale(1.08); box-shadow: 0 0 38px rgba(177, 236, 255, 1); }
-    }
-    @keyframes beamScan {
-      0% { box-shadow: 0 -28px 14px rgba(102, 195, 255, 0.22); filter: brightness(0.9); }
-      50% { box-shadow: 0 0 28px rgba(214, 244, 255, 1); filter: brightness(1.2); }
-      100% { box-shadow: 0 28px 14px rgba(102, 195, 255, 0.22); filter: brightness(0.9); }
-    }
-    @keyframes executionPulse {
-      0%, 100% { transform: scale(1.04); opacity: 0.84; }
-      50% { transform: scale(1.11); opacity: 1; }
-    }
-    @keyframes executionBeam {
-      0%, 100% { opacity: 0.8; box-shadow: 0 0 18px rgba(110, 202, 255, 0.8); }
-      50% { opacity: 1; box-shadow: 0 0 38px rgba(223, 247, 255, 1); }
-    }
-    @keyframes neckCurrent {
-      0%, 100% { transform: translateX(-50%) scaleY(1); opacity: 0.88; }
-      50% { transform: translateX(-50%) scaleY(1.04); opacity: 1; }
-    }
-    @keyframes wingCharge {
-      0%, 100% { opacity: 0.72; transform: scale(1); }
-      50% { opacity: 1; transform: scale(1.03); }
-    }
-    @keyframes internalProcess {
-      0% { transform: translateX(-2%); filter: brightness(0.96); }
-      50% { transform: translateX(2%); filter: brightness(1.16); }
-      100% { transform: translateX(-2%); filter: brightness(0.96); }
-    }
-    @keyframes responseSpeak {
-      0%, 100% { transform: translateX(-50%) scaleY(1); }
-      50% { transform: translateX(-50%) scaleY(1.24); }
-    }
-    @keyframes responseHalo {
-      0%, 100% { opacity: 0.72; transform: scale(1.01); }
-      50% { opacity: 0.9; transform: scale(1.04); }
-    }
-    @media (max-width: 1024px) {
-      .shell {
-        padding: 18px 16px 28px;
-      }
-      .voice-dock,
-      .command-grid,
-      .ops-grid {
-        grid-template-columns: 1fr;
-      }
-      .command-actions {
-        justify-content: stretch;
-      }
-      .command-actions button {
-        width: 100%;
-      }
-      .avatar-shell {
-        width: min(82vw, 420px);
-      }
-      .feedback-metrics {
-        flex-direction: column;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>STOA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*  { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --blue : #4fc3f7;
+  --red  : #ef5350;
+  --teal : #80cbc4;
+  --dim  : #37474f;
+  --bg   : #060c14;
+}
+body {
+  width:100vw; height:100vh; background:var(--bg);
+  overflow:hidden; font-family:'Share Tech Mono',monospace; color:#e8f4fd;
+}
+#gl { position:fixed; inset:0; z-index:0; }
+.ui {
+  position:fixed; inset:0; z-index:10;
+  display:flex; flex-direction:column; align-items:center;
+  pointer-events:none;
+}
+.header {
+  width:100%; display:flex; align-items:center; justify-content:space-between;
+  padding:24px 28px; pointer-events:auto;
+}
+.logo {
+  font-family:'Orbitron',sans-serif; font-size:18px;
+  font-weight:900; letter-spacing:6px;
+  text-shadow:0 0 20px rgba(79,195,247,.55);
+}
+.pill {
+  font-size:9px; letter-spacing:3px; padding:5px 14px;
+  border:1px solid var(--dim); border-radius:20px; color:var(--dim);
+  transition:all .4s;
+}
+.pill.on  { color:var(--blue); border-color:var(--blue); box-shadow:0 0 12px rgba(79,195,247,.2); }
+.pill.mic { color:var(--red);  border-color:var(--red);  box-shadow:0 0 12px rgba(239,83,80,.25); }
+.pill.say { color:var(--teal); border-color:var(--teal); box-shadow:0 0 12px rgba(128,203,196,.2); }
+.push { flex:1; }
+.chat {
+  width:min(560px,90vw); max-height:210px;
+  overflow-y:auto; scrollbar-width:none;
+  display:flex; flex-direction:column; gap:10px;
+  padding:0 4px 8px; pointer-events:auto;
+}
+.chat::-webkit-scrollbar { display:none; }
+.msg { font-size:13px; line-height:1.65; animation:up .35s ease forwards; opacity:0; }
+@keyframes up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg.u { color:var(--dim); text-align:right; }
+.msg.u::before  { content:"› "; color:var(--blue); }
+.msg.a::before  { content:"STOA  "; color:var(--blue); font-weight:bold; }
+.think { display:none; align-items:center; gap:6px; font-size:10px; color:var(--dim); letter-spacing:2px; }
+.think.on { display:flex; }
+.d { width:4px; height:4px; border-radius:50%; background:var(--blue); animation:bk 1.2s infinite; }
+.d:nth-child(2){animation-delay:.2s} .d:nth-child(3){animation-delay:.4s}
+@keyframes bk { 0%,80%,100%{opacity:.15} 40%{opacity:1} }
+.mic-wrap {
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+  padding:28px 0 44px; pointer-events:auto;
+}
+.ring {
+  width:80px; height:80px; border-radius:50%;
+  border:1px solid rgba(79,195,247,.18);
+  display:flex; align-items:center; justify-content:center; position:relative;
+}
+.ring::before {
+  content:''; position:absolute; inset:-10px; border-radius:50%;
+  border:1px solid rgba(79,195,247,.07); animation:rp 3s infinite ease-out;
+}
+@keyframes rp { 0%{transform:scale(1);opacity:.5} 100%{transform:scale(1.4);opacity:0} }
+.ring.mic { border-color:rgba(239,83,80,.45); animation:rb .7s infinite alternate; }
+.ring.mic::before { border-color:rgba(239,83,80,.15); }
+@keyframes rb { from{box-shadow:0 0 0 0 rgba(239,83,80,.3)} to{box-shadow:0 0 0 14px rgba(239,83,80,0)} }
+.btn {
+  width:64px; height:64px; border-radius:50%;
+  background:rgba(79,195,247,.06); border:1.5px solid rgba(79,195,247,.32);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all .25s; -webkit-tap-highlight-color:transparent; color:#e8f4fd;
+}
+.btn:hover,.btn:active { background:rgba(79,195,247,.14); border-color:var(--blue); box-shadow:0 0 24px rgba(79,195,247,.3); }
+.btn.mic { background:rgba(239,83,80,.1); border-color:var(--red); box-shadow:0 0 22px rgba(239,83,80,.3); }
+.btn:disabled { opacity:.3; cursor:not-allowed; }
+.hint { font-size:9px; letter-spacing:3px; color:var(--dim); transition:color .3s; }
+.hint.mic { color:var(--red); }
+</style>
 </head>
 <body>
-  <canvas id="stars" aria-hidden="true"></canvas>
-  <div class="setup-overlay hidden" id="setupOverlay">
-    <div class="setup-card">
-      <h2>STOA // acesso</h2>
-      <p>Informe o token uma vez. Depois a entidade abre direto e continua operando a partir deste navegador.</p>
-      <input id="setupTokenInput" type="password" placeholder="STOA_ACCESS_TOKEN" autocomplete="off">
-      <button id="setupTokenConfirm" type="button">iniciar</button>
+
+<canvas id="gl"></canvas>
+
+<div class="ui">
+  <div class="header">
+    <div class="logo">STOA</div>
+    <div class="pill" id="pill">OFFLINE</div>
+  </div>
+  <div class="push"></div>
+  <div class="chat" id="chat">
+    <div class="think" id="think">
+      <div class="d"></div><div class="d"></div><div class="d"></div>
+      <span style="margin-left:6px">processando</span>
     </div>
   </div>
-  <main class="shell">
-    <section class="presence">
-      <div class="presence-status" id="avatarBadge">idle</div>
+  <div class="mic-wrap">
+    <div class="ring" id="ring">
+      <button class="btn" id="mbtn">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="2" width="6" height="12" rx="3"/>
+          <path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/>
+        </svg>
+      </button>
+    </div>
+    <div class="hint" id="hint">TOQUE PARA FALAR</div>
+  </div>
+</div>
 
-      <div class="avatar-stage">
-        <div class="avatar-shell has-reference" id="avatarShell" data-state="idle">
-          <div class="avatar-glow"></div>
-          <div class="entity-wings" aria-hidden="true"></div>
-          <img id="avatarImage" class="avatar-image" src="/api/avatar-reference" alt="Avatar do STOA Agent">
-          <div class="avatar-neck" aria-hidden="true"></div>
-          <div class="avatar-face" aria-hidden="true">
-            <span class="avatar-crown"></span>
-            <span class="avatar-eye left"></span>
-            <span class="avatar-eye right"></span>
-            <span class="avatar-mouth"></span>
-          </div>
-        </div>
-      </div>
+<script>
+/* ════════════════════════════════════
+   BACKEND — usa mesma origem (relativo)
+════════════════════════════════════ */
+const BACKEND = '';
+const TOKEN   = window.__STOA_TOKEN__ || '';
 
-      <div class="presence-feedback">
-        <div class="status-copy" id="avatarStatusText">em espera</div>
-        <div class="feedback-metrics" aria-label="sinais operacionais">
-          <span class="metric-inline"><span class="metric-label">canal</span><span class="metric-value" id="avatarSocketStatus">desconectado</span></span>
-          <span class="metric-inline"><span class="metric-label">sessão</span><span class="metric-value" id="avatarSessionMetric">sem sessão</span></span>
-          <span class="metric-inline"><span class="metric-label">origem</span><span class="metric-value" id="avatarSourceMetric">local</span></span>
-          <span class="metric-inline"><span class="metric-label">evento</span><span class="metric-value" id="avatarTimestampMetric">aguardando</span></span>
-        </div>
-      </div>
-    </section>
+/* ════════════════════════════════════
+   THREE.JS
+════════════════════════════════════ */
+const glCanvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas:glCanvas, antialias:true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x060c14, 1);
 
-    <section class="interaction-layer" id="interactionLayer">
-      <div class="command-line">
-        <button id="voiceStartBtn" type="button" aria-label="Ativar voz">voz</button>
-        <textarea id="prompt" placeholder="fale ou digite."></textarea>
-        <button id="send" aria-label="Executar comando">enviar</button>
-        <button id="voiceStopBtn" type="button" aria-label="Silenciar voz">parar</button>
-      </div>
+const scene  = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+camera.position.z = 3.0;
 
-      <div class="voice-dock">
-        <div class="waveform" aria-hidden="true">
-          <span style="--bar:0"></span>
-          <span style="--bar:1"></span>
-          <span style="--bar:2"></span>
-          <span style="--bar:3"></span>
-          <span style="--bar:4"></span>
-          <span style="--bar:5"></span>
-          <span style="--bar:6"></span>
-        </div>
-        <div class="scene-hint">toque na entidade ou pressione espaço para falar</div>
-      </div>
+function onResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+onResize();
+window.addEventListener('resize', onResize);
 
-      <pre id="output" class="output-feed">em espera</pre>
-      <div id="previewPanel" class="preview-panel hidden" data-kind="pending" aria-live="polite">
-        <div class="preview-meta">
-          <span id="previewTitle" class="preview-title">preview pendente</span>
-          <span id="previewModule" class="preview-module">sem módulo</span>
-        </div>
-        <div id="previewText" class="preview-text">Nenhum preview aguardando confirmação.</div>
-        <div class="preview-actions">
-          <button id="previewApplyBtn" type="button">apply</button>
-          <button id="previewCancelBtn" type="button">cancel</button>
-        </div>
-      </div>
-    </section>
+function glowTex() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const cx = c.getContext('2d');
+  const g  = cx.createRadialGradient(64,64,0,64,64,64);
+  g.addColorStop(0,    'rgba(255,255,255,1)');
+  g.addColorStop(0.3,  'rgba(255,255,255,0.8)');
+  g.addColorStop(0.65, 'rgba(255,255,255,0.15)');
+  g.addColorStop(1,    'rgba(255,255,255,0)');
+  cx.fillStyle = g; cx.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(c);
+}
+const ptex = glowTex();
 
-    <section class="ops-layer">
-      <details class="ops-drawer">
-        <summary>operacional</summary>
-        <div class="ops-content">
-          <div class="ops-config">
-            <div class="compact-toggles">
-              <label><input id="coworkerMode" type="checkbox" style="width:auto;" checked> coworker</label>
-              <label><input id="autopilotMode" type="checkbox" style="width:auto;" checked> orchestrate</label>
-              <label><input id="superMode" type="checkbox" style="width:auto;"> super agente</label>
-              <label><input id="voiceAutoSend" type="checkbox" style="width:auto;" checked> voz envia</label>
-              <label><input id="wakeWordMode" type="checkbox" style="width:auto;" checked> wake word</label>
-            </div>
-            <input id="wakeWordInput" type="text" placeholder="Palavra de ativação" value="stoa">
-          </div>
-          <div class="ops-grid">
-            <section>
-              <div class="panel">
-                <h2>Configuração da sessão</h2>
-                <div class="row">
-                  <input id="token" type="password" placeholder="Cole o STOA_ACCESS_TOKEN">
-                  <input id="sessionId" type="text" placeholder="session_id da conversa">
-                  <select id="agentMode">
-                    <option value="builder">builder</option>
-                    <option value="operator">operator</option>
-                  </select>
-                </div>
-                <div class="toolbar">
-                  <button id="presetLanding">Landing Page</button>
-                  <button id="presetApp">Mini App</button>
-                  <button id="presetReview">Revisar Projeto</button>
-                  <button id="presetPatch">Melhorar Arquivos</button>
-                </div>
-                <p class="hint">Token, presets e sessão continuam disponíveis, mas não dominam mais a experiência principal.</p>
-              </div>
+function haloTex() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const cx = c.getContext('2d');
+  const g  = cx.createRadialGradient(128,128,30,128,128,128);
+  g.addColorStop(0,   'rgba(79,195,247,0.22)');
+  g.addColorStop(0.5, 'rgba(79,195,247,0.07)');
+  g.addColorStop(1,   'rgba(79,195,247,0)');
+  cx.fillStyle = g; cx.fillRect(0,0,256,256);
+  return new THREE.CanvasTexture(c);
+}
 
-              <div class="panel">
-                <h2>Sessão</h2>
-                <div class="toolbar">
-                  <button id="refreshSession">Memória</button>
-                  <button id="refreshTree">Árvore</button>
-                  <button id="refreshFiles">Arquivos</button>
-                  <button id="refreshQueue">Fila</button>
-                  <button id="runNextQueue">Rodar Próxima</button>
-                  <button id="refreshCoworker">Coworker</button>
-                  <button id="runNextCoworker">Rodar Coworker</button>
-                  <button id="dailyReportBtn">Relatório</button>
-                  <button id="planObjectiveBtn">Planejar Objetivo</button>
-                  <button id="startQueueWorker">Auto ON</button>
-                  <button id="stopQueueWorker">Auto OFF</button>
-                </div>
-                <pre id="sessionInfo">Nenhuma sessão carregada.</pre>
-              </div>
+const N = 220, PHI = Math.PI*(3-Math.sqrt(5));
+const pos=[], col=[], types=[];
+const BLUE=new THREE.Color(0x4fc3f7), RED=new THREE.Color(0xef5350);
 
-              <div class="panel">
-                <h2>Fila de Tarefas</h2>
-                <div class="row">
-                  <textarea id="queueTaskText" placeholder="Descreva uma tarefa para a fila"></textarea>
-                  <button id="addQueueTask">Adicionar na fila</button>
-                </div>
-                <div class="list" id="queueList"></div>
-              </div>
+for (let i=0;i<N;i++) {
+  const y=1-(i/(N-1))*2, r=Math.sqrt(Math.max(0,1-y*y)), t=PHI*i;
+  pos.push(Math.cos(t)*r, y, Math.sin(t)*r);
+  const isRed = Math.random()<0.28;
+  types.push(isRed?1:0);
+  const c=isRed?RED:BLUE; col.push(c.r,c.g,c.b);
+}
 
-              <div class="panel">
-                <h2>Inbox</h2>
-                <div class="toolbar">
-                  <button id="refreshInbox">Inbox</button>
-                </div>
-                <div class="list" id="inboxList"></div>
-              </div>
-            </section>
+const pgeo = new THREE.BufferGeometry();
+pgeo.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+pgeo.setAttribute('color',    new THREE.Float32BufferAttribute(col,3));
+const pmat = new THREE.PointsMaterial({
+  size:0.055, map:ptex, vertexColors:true,
+  transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+});
+const pts = new THREE.Points(pgeo, pmat);
 
-            <section>
-              <div class="panel">
-                <h2>Projeto</h2>
-                <div class="list" id="projectTree"></div>
-              </div>
+const lpos=[], lcol=[];
+const CONN=0.52;
+for (let i=0;i<N;i++) for (let j=i+1;j<N;j++) {
+  const dx=pos[i*3]-pos[j*3], dy=pos[i*3+1]-pos[j*3+1], dz=pos[i*3+2]-pos[j*3+2];
+  if (dx*dx+dy*dy+dz*dz>CONN*CONN) continue;
+  lpos.push(pos[i*3],pos[i*3+1],pos[i*3+2], pos[j*3],pos[j*3+1],pos[j*3+2]);
+  const ci=types[i]===1?RED:BLUE, cj=types[j]===1?RED:BLUE;
+  lcol.push(ci.r,ci.g,ci.b, cj.r,cj.g,cj.b);
+}
+const lgeo = new THREE.BufferGeometry();
+lgeo.setAttribute('position', new THREE.Float32BufferAttribute(lpos,3));
+lgeo.setAttribute('color',    new THREE.Float32BufferAttribute(lcol,3));
+const lmat = new THREE.LineBasicMaterial({
+  vertexColors:true, transparent:true, opacity:0.15,
+  blending:THREE.AdditiveBlending, depthWrite:false,
+});
+const lines = new THREE.LineSegments(lgeo, lmat);
 
-              <div class="panel">
-                <h2>Arquivos Editáveis</h2>
-                <div class="list" id="editableFiles"></div>
-              </div>
+const halo = new THREE.Mesh(
+  new THREE.PlaneGeometry(3.4,3.4),
+  new THREE.MeshBasicMaterial({
+    map:haloTex(), transparent:true, depthWrite:false,
+    blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+  })
+);
 
-              <div class="panel">
-                <h2>Arquivo Selecionado</h2>
-                <div class="row">
-                  <input id="selectedPath" type="text" placeholder="relative_path do arquivo">
-                  <div class="toolbar">
-                    <button id="readFileBtn">Ler</button>
-                    <button id="reviewFileBtn">Revisar</button>
-                    <button id="saveFileBtn">Salvar</button>
-                  </div>
-                  <textarea id="reviewInstruction" placeholder="Instrução para revisar o arquivo"></textarea>
-                  <textarea id="fileEditor" placeholder="Conteúdo do arquivo selecionado"></textarea>
-                </div>
-              </div>
+const group = new THREE.Group();
+group.add(pts, lines, halo);
+scene.add(group);
 
-              <div class="panel">
-                <h2>Patch de Projeto</h2>
-                <div class="row">
-                  <textarea id="projectPatchFiles" placeholder="Um relative_path por linha"></textarea>
-                  <textarea id="projectPatchInstruction" placeholder="Descreva a mudança coordenada para esses arquivos"></textarea>
-                  <button id="projectPatchBtn">Aplicar Project Patch</button>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-      </details>
-    </section>
-  </main>
-  <script>
-    const starsCanvas = document.getElementById('stars');
-    const starsContext = starsCanvas.getContext('2d');
-    const setupOverlay = document.getElementById('setupOverlay');
-    const setupTokenInput = document.getElementById('setupTokenInput');
-    const setupTokenConfirm = document.getElementById('setupTokenConfirm');
-    const tokenInput = document.getElementById('token');
-    const sessionInput = document.getElementById('sessionId');
-    const promptInput = document.getElementById('prompt');
-    const agentMode = document.getElementById('agentMode');
-    const output = document.getElementById('output');
-    const previewPanel = document.getElementById('previewPanel');
-    const previewTitle = document.getElementById('previewTitle');
-    const previewModule = document.getElementById('previewModule');
-    const previewText = document.getElementById('previewText');
-    const previewApplyBtn = document.getElementById('previewApplyBtn');
-    const previewCancelBtn = document.getElementById('previewCancelBtn');
-    const button = document.getElementById('send');
-    const interactionLayer = document.getElementById('interactionLayer');
-    const avatarShell = document.getElementById('avatarShell');
-    const avatarImage = document.getElementById('avatarImage');
-    const opsDrawer = document.querySelector('.ops-drawer');
-    const avatarBadge = document.getElementById('avatarBadge');
-    const avatarStatusText = document.getElementById('avatarStatusText');
-    const avatarSocketStatus = document.getElementById('avatarSocketStatus');
-    const avatarSessionMetric = document.getElementById('avatarSessionMetric');
-    const avatarSourceMetric = document.getElementById('avatarSourceMetric');
-    const avatarTimestampMetric = document.getElementById('avatarTimestampMetric');
-    const superMode = document.getElementById('superMode');
-    const autopilotMode = document.getElementById('autopilotMode');
-    const coworkerMode = document.getElementById('coworkerMode');
-    const voiceAutoSend = document.getElementById('voiceAutoSend');
-    const wakeWordMode = document.getElementById('wakeWordMode');
-    const wakeWordInput = document.getElementById('wakeWordInput');
-    const voiceStartBtn = document.getElementById('voiceStartBtn');
-    const voiceStopBtn = document.getElementById('voiceStopBtn');
-    const sessionInfo = document.getElementById('sessionInfo');
-    const projectTree = document.getElementById('projectTree');
-    const editableFiles = document.getElementById('editableFiles');
-    const selectedPath = document.getElementById('selectedPath');
-    const reviewInstruction = document.getElementById('reviewInstruction');
-    const refreshSession = document.getElementById('refreshSession');
-    const refreshTree = document.getElementById('refreshTree');
-    const refreshFiles = document.getElementById('refreshFiles');
-    const refreshQueue = document.getElementById('refreshQueue');
-    const runNextQueue = document.getElementById('runNextQueue');
-    const refreshCoworker = document.getElementById('refreshCoworker');
-    const runNextCoworker = document.getElementById('runNextCoworker');
-    const dailyReportBtn = document.getElementById('dailyReportBtn');
-    const planObjectiveBtn = document.getElementById('planObjectiveBtn');
-    const startQueueWorker = document.getElementById('startQueueWorker');
-    const stopQueueWorker = document.getElementById('stopQueueWorker');
-    const readFileBtn = document.getElementById('readFileBtn');
-    const reviewFileBtn = document.getElementById('reviewFileBtn');
-    const saveFileBtn = document.getElementById('saveFileBtn');
-    const fileEditor = document.getElementById('fileEditor');
-    const projectPatchFiles = document.getElementById('projectPatchFiles');
-    const projectPatchInstruction = document.getElementById('projectPatchInstruction');
-    const projectPatchBtn = document.getElementById('projectPatchBtn');
-    const queueTaskText = document.getElementById('queueTaskText');
-    const addQueueTask = document.getElementById('addQueueTask');
-    const queueList = document.getElementById('queueList');
-    const refreshInbox = document.getElementById('refreshInbox');
-    const inboxList = document.getElementById('inboxList');
-    const presetLanding = document.getElementById('presetLanding');
-    const presetApp = document.getElementById('presetApp');
-    const presetReview = document.getElementById('presetReview');
-    const presetPatch = document.getElementById('presetPatch');
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    let recognition = null;
-    let wakeWordArmed = false;
-    let sessionId = sessionStorage.getItem('stoa_session_id') || '';
-    let avatarState = 'idle';
-    let avatarSocket = null;
-    let avatarReconnectTimer = null;
-    let avatarIdleTimer = null;
-    let stars = [];
-    let pendingPreview = null;
+let rotSpd=0.003, rotTarget=0.003;
+let opTarget=0.15, szTarget=0.055;
+let clk=0;
 
-    const avatarCopy = {
-      idle: 'em espera',
-      listening: 'ouvindo',
-      thinking: 'processando',
-      executing: 'executando',
-      responding: 'respondendo'
-      ,
-      confirming: 'preciso da sua confirmação'
-    };
+function setVis(s) {
+  if(s==='idle')      {rotTarget=0.003;opTarget=0.15;szTarget=0.055;}
+  if(s==='listening') {rotTarget=0.012;opTarget=0.32;szTarget=0.068;}
+  if(s==='thinking')  {rotTarget=0.018;opTarget=0.24;szTarget=0.058;}
+  if(s==='speaking')  {rotTarget=0.007;opTarget=0.28;szTarget=0.062;}
+}
 
-    function storedToggleState(key, fallback) {
-      const stored = sessionStorage.getItem(key);
-      if (stored === null) return fallback;
-      return stored === 'true';
-    }
+(function tick(){
+  requestAnimationFrame(tick);
+  clk += 0.016;
+  rotSpd += (rotTarget-rotSpd)*0.04;
+  group.rotation.y += rotSpd;
+  group.rotation.x  = Math.sin(clk*0.22)*0.10;
+  const sz = appState==='speaking' ? szTarget+Math.sin(clk*5.5)*0.009 : szTarget;
+  pmat.size    += (sz-pmat.size)*0.07;
+  lmat.opacity += (opTarget-lmat.opacity)*0.06;
+  renderer.render(scene, camera);
+})();
 
-    function persistCommandModeSettings() {
-      sessionStorage.setItem('stoa_agent_mode', agentMode.value);
-      sessionStorage.setItem('stoa_coworker_mode', String(coworkerMode.checked));
-      sessionStorage.setItem('stoa_autopilot_mode', String(autopilotMode.checked));
-      sessionStorage.setItem('stoa_super_mode', String(superMode.checked));
-    }
+/* ════════════════════════════════════
+   STATE
+════════════════════════════════════ */
+let appState='idle', online=false;
 
-    function restoreCommandModeSettings() {
-      agentMode.value = sessionStorage.getItem('stoa_agent_mode') || agentMode.value;
-      coworkerMode.checked = storedToggleState('stoa_coworker_mode', coworkerMode.checked);
-      autopilotMode.checked = storedToggleState('stoa_autopilot_mode', autopilotMode.checked);
-      superMode.checked = storedToggleState('stoa_super_mode', superMode.checked);
-    }
+function setState(s) {
+  appState=s; setVis(s);
+  const pill=document.getElementById('pill');
+  const ring=document.getElementById('ring');
+  const btn =document.getElementById('mbtn');
+  const hint=document.getElementById('hint');
+  pill.className='pill'; ring.className='ring';
+  btn.className='btn';   hint.className='hint';
+  const m={
+    idle:     {label:online?'ONLINE':'OFFLINE',pc:online?'on':'',        hint:'TOQUE PARA FALAR'},
+    listening:{label:'OUVINDO', pc:'mic',rc:'mic',bc:'mic',hc:'mic',     hint:'OUVINDO...'},
+    thinking: {label:'PENSANDO',pc:'on',                                  hint:'PROCESSANDO...'},
+    speaking: {label:'FALANDO', pc:'say',                                 hint:'FALANDO...'},
+  }[s];
+  pill.textContent=m.label;
+  if(m.pc) pill.classList.add(m.pc);
+  if(m.rc) ring.classList.add(m.rc);
+  if(m.bc) btn.classList.add(m.bc);
+  if(m.hc) hint.classList.add(m.hc);
+  hint.textContent=m.hint;
+  btn.disabled=(s==='thinking'||s==='speaking');
+}
 
-    function resizeStarsCanvas() {
-      starsCanvas.width = window.innerWidth;
-      starsCanvas.height = window.innerHeight;
-    }
+/* ════════════════════════════════════
+   CHAT
+════════════════════════════════════ */
+const chatEl=document.getElementById('chat');
+const thinkEl=document.getElementById('think');
+function addMsg(text,who){
+  const d=document.createElement('div');
+  d.className='msg '+who; d.textContent=text;
+  chatEl.insertBefore(d,thinkEl);
+  chatEl.scrollTop=chatEl.scrollHeight;
+}
+function showThink(v){thinkEl.className=v?'think on':'think';}
 
-    function initStars() {
-      stars = Array.from({ length: 180 }, () => ({
-        x: Math.random() * starsCanvas.width,
-        y: Math.random() * starsCanvas.height,
-        r: Math.random() * 1.4 + 0.2,
-        alpha: Math.random() * 0.4 + 0.08,
-        speed: Math.random() * 0.0016 + 0.0008,
-        phase: Math.random() * Math.PI * 2
-      }));
-    }
+/* ════════════════════════════════════
+   BACKEND
+════════════════════════════════════ */
+async function ping(){
+  try{
+    const r=await fetch(BACKEND+'/api/health');
+    online=r.ok;
+  }catch{online=false;}
+  if(appState==='idle') setState('idle');
+}
 
-    function animateStars(time) {
-      starsContext.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
-      stars.forEach((star) => {
-        const a = star.alpha * (0.55 + 0.45 * Math.sin(time * star.speed + star.phase));
-        starsContext.beginPath();
-        starsContext.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-        starsContext.fillStyle = `rgba(156, 220, 255, ${a})`;
-        starsContext.fill();
-      });
-      window.requestAnimationFrame(animateStars);
-    }
-
-    function syncTokenVisual(token) {
-      tokenInput.value = token;
-      setupTokenInput.value = token;
-      sessionStorage.setItem('stoa_token', token);
-      setupOverlay.classList.add('hidden');
-      connectAvatarSocket();
-      loadPendingPreviewState(sessionId).catch(() => {});
-    }
-
-    function tryTokenBoot() {
-      const hashToken = window.location.hash.replace(/^#/, '').trim();
-      const storedToken = sessionStorage.getItem('stoa_token') || '';
-      const bootToken = hashToken || storedToken;
-      if (bootToken) {
-        syncTokenVisual(bootToken);
-      } else {
-        setupOverlay.classList.remove('hidden');
-        if (opsDrawer) opsDrawer.open = true;
-      }
-    }
-
-    resizeStarsCanvas();
-    initStars();
-    window.addEventListener('resize', () => {
-      resizeStarsCanvas();
-      initStars();
+async function ask(text){
+  setState('thinking'); showThink(true);
+  try{
+    const r=await fetch(BACKEND+'/api/orchestrate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},
+      body:JSON.stringify({text:text, mode:'builder'}),
     });
-    window.requestAnimationFrame(animateStars);
-
-    tokenInput.value = sessionStorage.getItem('stoa_token') || '';
-    sessionInput.value = sessionId;
-    wakeWordInput.value = sessionStorage.getItem('stoa_wake_word') || wakeWordInput.value;
-    restoreCommandModeSettings();
-    avatarSessionMetric.textContent = sessionId || 'sem sessão';
-
-    const resolvedAvatarImageUrl = window.STOA_AVATAR_IMAGE_URL || '/api/avatar-reference';
-    avatarImage.addEventListener('load', () => {
-      avatarImage.style.display = 'block';
-      avatarShell.classList.add('has-reference');
-    });
-    avatarImage.addEventListener('error', () => {
-      avatarShell.classList.remove('has-reference');
-    });
-    avatarImage.src = resolvedAvatarImageUrl;
-
-    async function apiFetch(url, options = {}) {
-      const token = tokenInput.value.trim();
-      if (!token) {
-        throw new Error('Informe o STOA_ACCESS_TOKEN.');
-      }
-      sessionStorage.setItem('stoa_token', token);
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          ...(options.headers || {}),
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        const error = new Error(data.detail || JSON.stringify(data));
-        error.status = response.status;
-        error.payload = data;
-        throw error;
-      }
-      return data;
-    }
-
-    function syncSessionId(newSessionId) {
-      if (!newSessionId) return;
-      sessionId = newSessionId;
-      sessionInput.value = newSessionId;
-      sessionStorage.setItem('stoa_session_id', newSessionId);
-      avatarSessionMetric.textContent = newSessionId;
-      connectAvatarSocket();
-      loadPendingPreviewState(newSessionId).catch(() => {});
-    }
-
-    function requireSessionId() {
-      const value = sessionInput.value.trim() || sessionId;
-      if (!value) throw new Error('Nenhum session_id disponível.');
-      syncSessionId(value);
-      return value;
-    }
-
-    function renderList(container, items, formatter, onClick) {
-      container.innerHTML = '';
-      if (!items.length) {
-        container.innerHTML = '<div class="muted">Nenhum item.</div>';
-        return;
-      }
-      items.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.innerHTML = formatter(item);
-        if (onClick) div.onclick = () => onClick(item);
-        container.appendChild(div);
-      });
-    }
-
-    function updateAvatarTimestamp(timestamp) {
-      if (!timestamp) {
-        avatarTimestampMetric.textContent = 'aguardando';
-        return;
-      }
-      const parsed = new Date(timestamp);
-      avatarTimestampMetric.textContent = Number.isNaN(parsed.getTime())
-        ? timestamp
-        : parsed.toLocaleTimeString('pt-BR');
-    }
-
-    function narrate(text) {
-      output.textContent = text;
-    }
-
-    function classifyPreviewControl(text) {
-      const normalized = (text || '').trim().toLowerCase();
-      if (['apply', 'aplicar', 'confirmar', 'executar', 'ok'].includes(normalized)) {
-        return 'apply';
-      }
-      if (['cancel', 'cancelar', 'descartar', 'abortar', 'nao', 'não'].includes(normalized)) {
-        return 'cancel';
-      }
-      return null;
-    }
-
-    function setPreviewControlsDisabled(disabled) {
-      previewApplyBtn.disabled = disabled;
-      previewCancelBtn.disabled = disabled;
-    }
-
-    function clearPendingPreview(options = {}) {
-      pendingPreview = null;
-      previewPanel.dataset.kind = options.kind || 'pending';
-      previewPanel.classList.add('hidden');
-      previewTitle.textContent = 'preview pendente';
-      previewModule.textContent = 'sem módulo';
-      previewText.textContent = 'Nenhum preview aguardando confirmação.';
-      setPreviewControlsDisabled(false);
-    }
-
-    function formatPendingPreview(preview) {
-      return [
-        `módulo: ${preview.module || 'info'}`,
-        `pedido: ${preview.original_text || 'sem descrição'}`,
-        'Use apply para executar exatamente esta prévia ou cancel para descartá-la.'
-      ].join('\\n');
-    }
-
-    function setPendingPreview(preview, options = {}) {
-      pendingPreview = preview;
-      previewPanel.dataset.kind = options.kind || 'pending';
-      previewPanel.classList.remove('hidden');
-      previewTitle.textContent = options.title || 'preview pendente';
-      previewModule.textContent = preview.module || 'info';
-      previewText.textContent = options.text || formatPendingPreview(preview);
-      setPreviewControlsDisabled(Boolean(options.busy));
-      if (options.syncAvatar !== false) {
-        setAvatarState('confirming', {
-          source: options.source || 'client',
-          detail: options.detail || 'preview aguardando apply ou cancel',
-          sessionId: preview.session_id || sessionId
-        });
-      }
-    }
-
-    async function loadPendingPreviewState(sessionCandidate) {
-      const token = tokenInput.value.trim();
-      const targetSession = (sessionCandidate || sessionInput.value.trim() || sessionId || '').trim();
-      if (!token || !targetSession) {
-        clearPendingPreview();
-        return null;
-      }
-      const data = await apiFetch(`/api/pending-preview/${encodeURIComponent(targetSession)}`);
-      if (data.pending_preview) {
-        setPendingPreview(data.pending_preview, {
-          source: 'server',
-          detail: 'preview restaurado',
-          syncAvatar: false
-        });
-        return data.pending_preview;
-      }
-      clearPendingPreview();
-      return null;
-    }
-
-    function resolveCommandEndpoint(text) {
-      const controlAction = classifyPreviewControl(text);
-      if (controlAction) {
-        return { endpoint: '/api/command', controlAction };
-      }
-      if (pendingPreview) {
-        return {
-          endpoint: null,
-          controlAction: null,
-          blocked: true,
-          reason: 'Existe um preview pendente. Use apply para executar ou cancel para descartar antes de enviar outro comando.'
-        };
-      }
-      return {
-        endpoint: coworkerMode.checked
-          ? '/api/coworker/intake'
-          : (autopilotMode.checked ? '/api/orchestrate' : (superMode.checked ? '/api/super-command' : '/api/command')),
-        controlAction: null,
-        blocked: false
-      };
-    }
-
-    function applyCommandResponseToInterface(data, endpoint, controlAction) {
-      if (endpoint !== '/api/command') {
-        return false;
-      }
-
-      if (data.action_type === 'preview' && data.data?.pending_preview) {
-        setPendingPreview(data.data.pending_preview, {
-          source: 'client',
-          detail: 'preview pronto para confirmação'
-        });
-        narrate(data.response || 'preview pronto');
-        promptInput.value = '';
-        return true;
-      }
-
-      if (data.action_type === 'applied') {
-        clearPendingPreview();
-        narrate(data.response || 'preview aplicado');
-        setAvatarState('responding', {
-          source: 'client',
-          detail: 'preview aplicado',
-          sessionId: data.session_id || sessionId
-        });
-        promptInput.value = '';
-        return true;
-      }
-
-      if (data.action_type === 'cancelled') {
-        clearPendingPreview();
-        narrate(data.response || 'preview cancelado');
-        setAvatarState('responding', {
-          source: 'client',
-          detail: 'preview cancelado',
-          sessionId: data.session_id || sessionId
-        });
-        promptInput.value = '';
-        return true;
-      }
-
-      clearPendingPreview();
-      narrate(data.response || 'concluído');
-      setAvatarState('responding', {
-        source: 'client',
-        detail: data.response || 'concluído',
-        sessionId: data.session_id || sessionId
-      });
-      if (controlAction) {
-        promptInput.value = '';
-      }
-      return true;
-    }
-
-    function setAvatarState(state, meta = {}) {
-      const aliasMap = {
-        processing: 'thinking',
-        speaking: 'responding'
-      };
-      const requestedState = aliasMap[state] || state;
-      const normalizedState = ['idle', 'listening', 'thinking', 'confirming', 'executing', 'responding'].includes(requestedState) ? requestedState : 'idle';
-      avatarState = normalizedState;
-      avatarShell.dataset.state = normalizedState;
-      interactionLayer.dataset.state = normalizedState;
-      avatarBadge.textContent = normalizedState;
-      avatarStatusText.textContent = meta.detail || avatarCopy[normalizedState] || avatarCopy.idle;
-      avatarSourceMetric.textContent = meta.source || 'local';
-      avatarSessionMetric.textContent = meta.sessionId || sessionId || 'sem sessão';
-      updateAvatarTimestamp(meta.timestamp);
-
-      if (avatarIdleTimer) {
-        clearTimeout(avatarIdleTimer);
-        avatarIdleTimer = null;
-      }
-      if (normalizedState === 'responding') {
-        avatarIdleTimer = window.setTimeout(() => {
-          setAvatarState('idle', { source: 'local', sessionId: sessionId || meta.sessionId || '' });
-        }, 2400);
-      }
-    }
-
-    function emitAvatarClientState(state, detail) {
-      setAvatarState(state, {
-        source: 'client',
-        detail,
-        sessionId
-      });
-      if (avatarSocket && avatarSocket.readyState === WebSocket.OPEN) {
-        avatarSocket.send(JSON.stringify({
-          type: 'avatar_state',
-          state,
-          detail
-        }));
-      }
-    }
-
-    function connectAvatarSocket() {
-      const token = tokenInput.value.trim();
-      if (!token) {
-        avatarSocketStatus.textContent = 'aguardando token';
-        return;
-      }
-
-      if (avatarSocket) {
-        avatarSocket.onopen = null;
-        avatarSocket.onmessage = null;
-        avatarSocket.onclose = null;
-        avatarSocket.onerror = null;
-        avatarSocket.close();
-      }
-
-      if (avatarReconnectTimer) {
-        clearTimeout(avatarReconnectTimer);
-        avatarReconnectTimer = null;
-      }
-
-      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const url = new URL(`${protocol}://${window.location.host}/ws`);
-      url.searchParams.set('token', token);
-      if (sessionId) {
-        url.searchParams.set('session_id', sessionId);
-      }
-
-      avatarSocketStatus.textContent = 'conectando';
-      avatarSocket = new WebSocket(url.toString());
-
-      avatarSocket.onopen = () => {
-        avatarSocketStatus.textContent = 'conectado';
-      };
-
-      avatarSocket.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          if (message.type === 'avatar_state') {
-            setAvatarState(message.state, {
-              detail: message.detail,
-              source: message.source || 'server',
-              sessionId: message.session_id || sessionId,
-              timestamp: message.timestamp
-            });
-          } else if (message.type === 'avatar_metrics') {
-            avatarSocketStatus.textContent = message.metrics?.connected ? 'conectado' : 'desconectado';
-            updateAvatarTimestamp(message.timestamp);
-          }
-        } catch (error) {
-          console.warn('Falha ao processar evento do avatar:', error);
-        }
-      };
-
-      avatarSocket.onclose = () => {
-        avatarSocketStatus.textContent = 'desconectado';
-        avatarReconnectTimer = window.setTimeout(() => {
-          connectAvatarSocket();
-        }, 2500);
-      };
-
-      avatarSocket.onerror = () => {
-        avatarSocketStatus.textContent = 'erro';
-      };
-    }
-
-    function ensureVoiceRecognition() {
-      if (!SpeechRecognition) {
-        throw new Error('Reconhecimento de voz indisponível neste navegador. Use Edge ou Chrome.');
-      }
-      if (recognition) return recognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'pt-BR';
-      recognition.interimResults = true;
-      recognition.continuous = true;
-      recognition.onresult = async (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          transcript += event.results[i][0].transcript;
-        }
-        const cleanedTranscript = transcript.trim();
-        const wakeWord = (wakeWordInput.value || 'stoa').trim().toLowerCase();
-        sessionStorage.setItem('stoa_wake_word', wakeWordInput.value || 'stoa');
-
-        if (wakeWordMode.checked) {
-          const lowered = cleanedTranscript.toLowerCase();
-          const wakeIndex = wakeWord ? lowered.lastIndexOf(wakeWord) : -1;
-          if (!wakeWordArmed) {
-            if (wakeIndex >= 0) {
-              wakeWordArmed = true;
-              const commandPart = cleanedTranscript.slice(wakeIndex + wakeWord.length).trim().replace(/^[:,-]\\s*/, '');
-              promptInput.value = commandPart;
-              narrate(`${wakeWord} ativo`);
-              emitAvatarClientState('listening', `${wakeWord} ativo`);
-            }
-            return;
-          }
-          if (wakeWord && lowered.startsWith(wakeWord)) {
-            promptInput.value = cleanedTranscript.slice(wakeWord.length).trim().replace(/^[:,-]\\s*/, '');
-          } else {
-            promptInput.value = cleanedTranscript;
-          }
-        } else {
-          promptInput.value = cleanedTranscript;
-        }
-
-        if (voiceAutoSend.checked) {
-          const last = event.results[event.results.length - 1];
-          if (last && last.isFinal && promptInput.value.trim()) {
-            await sendCommand();
-            wakeWordArmed = false;
-          }
-        }
-      };
-      recognition.onstart = () => {
-        wakeWordArmed = false;
-        emitAvatarClientState(
-          'listening',
-          wakeWordMode.checked
-            ? `${wakeWordInput.value || 'stoa'}`
-            : 'ouvindo'
-        );
-        narrate(wakeWordMode.checked
-          ? `${wakeWordInput.value || 'stoa'}`
-          : 'ouvindo');
-      };
-      recognition.onerror = (event) => {
-        setAvatarState('idle', { source: 'client', detail: `falha: ${event.error}`, sessionId });
-        narrate(`falha: ${event.error}`);
-      };
-      recognition.onend = () => {
-        wakeWordArmed = false;
-        setAvatarState('idle', { source: 'client', sessionId });
-        if (!voiceAutoSend.checked) {
-          narrate('em espera');
-        }
-      };
-      return recognition;
-    }
-
-    async function loadSession() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/session/${encodeURIComponent(currentSession)}`);
-      sessionInfo.textContent = JSON.stringify(data, null, 2);
-    }
-
-    async function loadProjectTree() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/project-tree/${encodeURIComponent(currentSession)}`);
-      renderList(
-        projectTree,
-        data.items || [],
-        item => `<strong>${item.relative_path}</strong><div class="muted">${item.type}</div>`,
-        item => { selectedPath.value = item.relative_path; }
-      );
-    }
-
-    async function loadEditableFiles() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/editable-files/${encodeURIComponent(currentSession)}`);
-      renderList(
-        editableFiles,
-        data.files || [],
-        item => `<strong>${item.relative_path}</strong><div class="muted">${item.size} bytes</div>`,
-        item => {
-          selectedPath.value = item.relative_path;
-          const current = new Set(
-            projectPatchFiles.value
-              .split('\\n')
-              .map(line => line.trim())
-              .filter(Boolean)
-          );
-          current.add(item.relative_path);
-          projectPatchFiles.value = Array.from(current).join('\\n');
-        }
-      );
-    }
-
-    async function loadQueue() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/queue/${encodeURIComponent(currentSession)}`);
-      renderList(
-        queueList,
-        data.tasks || [],
-        item => `<strong>${item.status}</strong><div>${item.text}</div><div class="muted">${item.id}</div>`
-      );
-    }
-
-    async function loadInbox() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/coworker/inbox/${encodeURIComponent(currentSession)}`);
-      renderList(
-        inboxList,
-        data.items || [],
-        item => `<strong>${item.priority} | ${item.status}</strong><div>${item.title}</div><div class="muted">${item.item_type}</div>`,
-        async item => {
-          narrate('vou executar esta ação');
-          const data = await apiFetch('/api/coworker/inbox/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: currentSession, item_id: item.id })
-          });
-          narrate('ação concluída');
-          await loadInbox().catch(() => {});
-          await loadCoworkerOverview().catch(() => {});
-        }
-      );
-    }
-
-    async function loadCoworkerOverview() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/coworker/${encodeURIComponent(currentSession)}/overview`);
-      sessionInfo.textContent = JSON.stringify(data, null, 2);
-      renderList(
-        inboxList,
-        data.inbox || [],
-        item => `<strong>${item.priority} | ${item.status}</strong><div>${item.title}</div><div class="muted">${item.item_type}</div>`,
-        async item => {
-          narrate('vou executar esta ação');
-          const executed = await apiFetch('/api/coworker/inbox/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_id: currentSession, item_id: item.id })
-          });
-          narrate('ação concluída');
-          await loadInbox().catch(() => {});
-          await loadCoworkerOverview().catch(() => {});
-        }
-      );
-      renderList(
-        queueList,
-        data.tasks || [],
-        item => `<strong>${item.priority} | ${item.status}</strong><div>${item.text}</div><div class="muted">${item.task_type || 'task'} • ${item.id}</div>`
-      );
-    }
-
-    async function runNextCoworkerTask() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/coworker/run-next/${encodeURIComponent(currentSession)}`, {
-        method: 'POST'
-      });
-      await loadCoworkerOverview().catch(() => {});
-      await loadEditableFiles().catch(() => {});
-      await loadProjectTree().catch(() => {});
-      await loadSession().catch(() => {});
-      narrate('próxima ação executada');
-    }
-
-    async function loadDailyReport() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/coworker/daily-report/${encodeURIComponent(currentSession)}`);
-      narrate('relatório pronto');
-    }
-
-    async function planLatestObjective() {
-      const currentSession = requireSessionId();
-      const overview = await apiFetch(`/api/coworker/${encodeURIComponent(currentSession)}/overview`);
-      const objectives = overview.objectives || [];
-      if (!objectives.length) throw new Error('Nenhum objetivo cadastrado para esta sessão.');
-      const target = objectives.find(item => item.status === 'active') || objectives[0];
-      const data = await apiFetch('/api/coworker/objective/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: currentSession,
-          objective_id: target.id,
-          replace_pending: false
-        })
-      });
-      await loadCoworkerOverview().catch(() => {});
-      narrate('plano criado');
-    }
-
-    async function addTaskToQueue() {
-      const text = queueTaskText.value.trim();
-      if (!text) throw new Error('Digite a tarefa da fila.');
-      const data = await apiFetch('/api/queue-task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: sessionInput.value.trim() || sessionId || null,
-          mode: agentMode.value,
-          text
-        })
-      });
-      syncSessionId(data.session_id);
-      queueTaskText.value = '';
-      await loadQueue();
-      narrate('tarefa adicionada');
-    }
-
-    async function runNextTask() {
-      const currentSession = requireSessionId();
-      const data = await apiFetch(`/api/queue-run-next/${encodeURIComponent(currentSession)}`, {
-        method: 'POST'
-      });
-      await loadQueue().catch(() => {});
-      await loadEditableFiles().catch(() => {});
-      await loadProjectTree().catch(() => {});
-      await loadSession().catch(() => {});
-      narrate('próxima tarefa executada');
-    }
-
-    async function setQueueWorker(enabled) {
-      const endpoint = enabled ? '/api/queue-worker/start' : '/api/queue-worker/stop';
-      const data = await apiFetch(endpoint, { method: 'POST' });
-      narrate(enabled ? 'automação ligada' : 'automação pausada');
-    }
-
-    async function readSelectedFile() {
-      const currentSession = requireSessionId();
-      const relativePath = selectedPath.value.trim();
-      if (!relativePath) throw new Error('Selecione um arquivo.');
-      const data = await apiFetch('/api/read-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: currentSession, relative_path: relativePath })
-      });
-      fileEditor.value = data.content;
-      narrate('arquivo aberto');
-    }
-
-    async function saveSelectedFile() {
-      const currentSession = requireSessionId();
-      const relativePath = selectedPath.value.trim();
-      if (!relativePath) throw new Error('Selecione um arquivo.');
-      const data = await apiFetch('/api/write-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: currentSession,
-          relative_path: relativePath,
-          content: fileEditor.value,
-          overwrite: true
-        })
-      });
-      narrate('arquivo salvo');
-      await loadEditableFiles().catch(() => {});
-      await loadProjectTree().catch(() => {});
-    }
-
-    async function applyProjectPatch() {
-      const currentSession = requireSessionId();
-      const relativePaths = projectPatchFiles.value
-        .split('\\n')
-        .map(line => line.trim())
-        .filter(Boolean);
-
-      if (!relativePaths.length) throw new Error('Informe ao menos um arquivo para o patch.');
-      if (!projectPatchInstruction.value.trim()) throw new Error('Descreva a mudança do project patch.');
-
-      const data = await apiFetch('/api/project-patch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: currentSession,
-          relative_paths: relativePaths,
-          instruction: projectPatchInstruction.value.trim(),
-          overwrite: true
-        })
-      });
-
-      narrate('patch aplicado');
-      await loadEditableFiles().catch(() => {});
-      await loadProjectTree().catch(() => {});
-      await loadSession().catch(() => {});
-    }
-
-    async function reviewSelectedFile() {
-      const currentSession = requireSessionId();
-      const relativePath = selectedPath.value.trim();
-      if (!relativePath) throw new Error('Selecione um arquivo.');
-      if (!reviewInstruction.value.trim()) throw new Error('Digite uma instrução de revisão.');
-      const data = await apiFetch('/api/review-file', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: currentSession,
-          relative_path: relativePath,
-          instruction: reviewInstruction.value.trim()
-        })
-      });
-      narrate('revisão pronta');
-    }
-
-    async function sendCommand(commandOverride = null) {
-      const text = (commandOverride ?? promptInput.value).trim();
-
-      if (!text) {
-        narrate('sem comando');
-        setAvatarState('idle', { source: 'client', detail: 'sem comando', sessionId });
-        return;
-      }
-
-      const route = resolveCommandEndpoint(text);
-      if (route.blocked) {
-        narrate(route.reason);
-        if (pendingPreview) {
-          setPendingPreview(pendingPreview, {
-            source: 'client',
-            detail: 'preview aguardando confirmação',
-            syncAvatar: true
-          });
-        } else {
-          setAvatarState('confirming', { source: 'client', detail: route.reason, sessionId });
-        }
-        return;
-      }
-
-      narrate('analisando');
-      emitAvatarClientState('thinking', 'processando');
-      if (pendingPreview && route.controlAction) {
-        setPreviewControlsDisabled(true);
-      }
-
-      try {
-        const data = await apiFetch(route.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            text,
-            language: 'pt-BR',
-            session_id: sessionInput.value.trim() || sessionId || null,
-            mode: agentMode.value
-          })
-        });
-
-        if (data.session_id) {
-          syncSessionId(data.session_id);
-        }
-
-        if (applyCommandResponseToInterface(data, route.endpoint, route.controlAction)) {
-          await loadSession().catch(() => {});
-          return;
-        }
-
-        if (coworkerMode.checked) {
-          narrate('organizei a próxima ação');
-          setAvatarState('responding', { source: 'client', detail: 'organizei a próxima ação', sessionId: data.session_id || sessionId });
-          await loadCoworkerOverview().catch(() => {});
-          await loadSession().catch(() => {});
-          return;
-        }
-
-        if (autopilotMode.checked) {
-          narrate('concluí o ciclo');
-          setAvatarState('responding', { source: 'client', detail: 'concluí o ciclo', sessionId: data.session_id || sessionId });
-          await loadEditableFiles().catch(() => {});
-          await loadProjectTree().catch(() => {});
-          await loadSession().catch(() => {});
-          return;
-        }
-
-        if (superMode.checked) {
-          narrate('entrega consolidada');
-          setAvatarState('responding', { source: 'client', detail: 'entrega consolidada', sessionId: data.session_id || sessionId });
-          await loadEditableFiles().catch(() => {});
-          await loadProjectTree().catch(() => {});
-          return;
-        }
-
-        narrate('concluído');
-        setAvatarState('responding', { source: 'client', detail: 'concluído', sessionId: data.session_id || sessionId });
-        await loadEditableFiles().catch(() => {});
-        await loadProjectTree().catch(() => {});
-      } catch (error) {
-        if (route.endpoint === '/api/command') {
-          await loadPendingPreviewState(sessionInput.value.trim() || sessionId).catch(() => clearPendingPreview({ kind: 'error' }));
-          if (error.status === 409 && String(error.message || error).includes('Nenhum preview pendente')) {
-            clearPendingPreview({ kind: 'error' });
-          } else if (pendingPreview) {
-            setPendingPreview(pendingPreview, {
-              kind: 'error',
-              source: 'client',
-              detail: 'falha ao processar preview',
-              title: 'preview pendente',
-              text: `${formatPendingPreview(pendingPreview)}\\n\\nFalha: ${String(error.message || error)}`
-            });
-          }
-        }
-        setPreviewControlsDisabled(false);
-        setAvatarState('idle', { source: 'client', detail: String(error.message || error), sessionId });
-        narrate(String(error.message || error));
-      }
-    }
-
-    refreshSession.addEventListener('click', () => loadSession().catch(error => output.textContent = String(error)));
-    refreshTree.addEventListener('click', () => loadProjectTree().catch(error => output.textContent = String(error)));
-    refreshFiles.addEventListener('click', () => loadEditableFiles().catch(error => output.textContent = String(error)));
-    refreshQueue.addEventListener('click', () => loadQueue().catch(error => output.textContent = String(error)));
-    runNextQueue.addEventListener('click', () => runNextTask().catch(error => output.textContent = String(error)));
-    refreshCoworker.addEventListener('click', () => loadCoworkerOverview().catch(error => output.textContent = String(error)));
-    refreshInbox.addEventListener('click', () => loadInbox().catch(error => output.textContent = String(error)));
-    runNextCoworker.addEventListener('click', () => runNextCoworkerTask().catch(error => output.textContent = String(error)));
-    dailyReportBtn.addEventListener('click', () => loadDailyReport().catch(error => output.textContent = String(error)));
-    planObjectiveBtn.addEventListener('click', () => planLatestObjective().catch(error => output.textContent = String(error)));
-    startQueueWorker.addEventListener('click', () => setQueueWorker(true).catch(error => output.textContent = String(error)));
-    stopQueueWorker.addEventListener('click', () => setQueueWorker(false).catch(error => output.textContent = String(error)));
-    readFileBtn.addEventListener('click', () => readSelectedFile().catch(error => output.textContent = String(error)));
-    reviewFileBtn.addEventListener('click', () => reviewSelectedFile().catch(error => output.textContent = String(error)));
-    saveFileBtn.addEventListener('click', () => saveSelectedFile().catch(error => output.textContent = String(error)));
-    projectPatchBtn.addEventListener('click', () => applyProjectPatch().catch(error => output.textContent = String(error)));
-    addQueueTask.addEventListener('click', () => addTaskToQueue().catch(error => output.textContent = String(error)));
-    button.addEventListener('click', () => sendCommand().catch(error => output.textContent = String(error)));
-    previewApplyBtn.addEventListener('click', () => sendCommand('apply').catch(error => output.textContent = String(error)));
-    previewCancelBtn.addEventListener('click', () => sendCommand('cancel').catch(error => output.textContent = String(error)));
-    voiceStartBtn.addEventListener('click', () => {
-      try {
-        ensureVoiceRecognition().start();
-      } catch (error) {
-        narrate(String(error));
-      }
-    });
-    voiceStopBtn.addEventListener('click', () => {
-      if (recognition) recognition.stop();
-      setAvatarState('idle', { source: 'client', detail: 'escuta encerrada', sessionId });
-    });
-    avatarShell.addEventListener('click', () => {
-      if (!setupOverlay.classList.contains('hidden')) return;
-      try {
-        if (avatarState === 'listening' && recognition) {
-          recognition.stop();
-          return;
-        }
-        ensureVoiceRecognition().start();
-      } catch (error) {
-        narrate(String(error));
-      }
-    });
-    wakeWordInput.addEventListener('change', () => {
-      sessionStorage.setItem('stoa_wake_word', wakeWordInput.value.trim() || 'stoa');
-    });
-    sessionInput.addEventListener('change', () => syncSessionId(sessionInput.value.trim()));
-    tokenInput.addEventListener('change', () => {
-      const token = tokenInput.value.trim();
-      if (!token) {
-        setupOverlay.classList.remove('hidden');
-        return;
-      }
-      syncTokenVisual(token);
-    });
-    setupTokenConfirm.addEventListener('click', () => {
-      const token = setupTokenInput.value.trim();
-      if (!token) return;
-      syncTokenVisual(token);
-      loadPendingPreviewState(sessionId).catch(() => {});
-    });
-    setupTokenInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        setupTokenConfirm.click();
-      }
-    });
-    agentMode.addEventListener('change', persistCommandModeSettings);
-    coworkerMode.addEventListener('change', persistCommandModeSettings);
-    autopilotMode.addEventListener('change', persistCommandModeSettings);
-    superMode.addEventListener('change', persistCommandModeSettings);
-    presetLanding.addEventListener('click', () => {
-      agentMode.value = 'builder';
-      superMode.checked = true;
-      autopilotMode.checked = true;
-      coworkerMode.checked = true;
-      persistCommandModeSettings();
-      promptInput.value = 'Crie uma landing page premium para uma consultoria de IA e entregue o HTML final em site/index.html';
-    });
-    presetApp.addEventListener('click', () => {
-      agentMode.value = 'builder';
-      superMode.checked = true;
-      autopilotMode.checked = true;
-      coworkerMode.checked = true;
-      persistCommandModeSettings();
-      promptInput.value = 'Crie um mini app FastAPI com documentação inicial e entregue os arquivos principais';
-    });
-    presetReview.addEventListener('click', () => {
-      agentMode.value = 'operator';
-      superMode.checked = true;
-      autopilotMode.checked = true;
-      coworkerMode.checked = true;
-      persistCommandModeSettings();
-      promptInput.value = 'Analise o projeto atual, identifique lacunas e proponha melhorias objetivas';
-    });
-    presetPatch.addEventListener('click', () => {
-      agentMode.value = 'operator';
-      projectPatchInstruction.value = 'Melhore esses arquivos com foco em clareza, consistência e qualidade técnica';
-    });
-    promptInput.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendCommand();
-      }
-    });
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Space' && !event.repeat) {
-        const activeTag = document.activeElement?.tagName;
-        if (activeTag === 'TEXTAREA' || activeTag === 'INPUT') return;
-        event.preventDefault();
-        if (!setupOverlay.classList.contains('hidden')) return;
-        try {
-          if (avatarState === 'listening' && recognition) {
-            recognition.stop();
-          } else {
-            ensureVoiceRecognition().start();
-          }
-        } catch (error) {
-          narrate(String(error));
-        }
-      }
-    });
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(error => {
-          console.warn('Falha ao registrar service worker do STOA:', error);
-        });
-        loadPendingPreviewState(sessionId).catch(() => {});
-      });
-    }
-    tryTokenBoot();
-  </script>
+    const d=await r.json();
+    showThink(false);
+    const reply=d.result?.final_response||d.response||d.message||d.text||d.content||JSON.stringify(d);
+    addMsg(reply,'a'); speak(reply);
+  }catch(e){
+    showThink(false);
+    addMsg('[Erro: '+e.message+']','a');
+    setState('idle');
+  }
+}
+
+/* ════════════════════════════════════
+   TTS
+════════════════════════════════════ */
+function speak(text){
+  if(!window.speechSynthesis){setState('idle');return;}
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang='pt-BR'; u.rate=1.0;
+  const applyVoice=()=>{
+    const vs=window.speechSynthesis.getVoices();
+    const v=vs.find(x=>x.lang==='pt-BR')||vs.find(x=>x.lang.startsWith('pt'));
+    if(v) u.voice=v;
+  };
+  applyVoice();
+  if('onvoiceschanged' in window.speechSynthesis)
+    window.speechSynthesis.onvoiceschanged=applyVoice;
+  u.onstart=()=>setState('speaking');
+  u.onend=()=>setState('idle');
+  u.onerror=()=>setState('idle');
+  setState('speaking');
+  window.speechSynthesis.speak(u);
+}
+
+/* ════════════════════════════════════
+   SPEECH RECOGNITION
+════════════════════════════════════ */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+let rec=null, listening=false;
+if(SR){
+  rec=new SR();
+  rec.lang='pt-BR'; rec.interimResults=false; rec.maxAlternatives=1;
+  rec.onresult=e=>{
+    const t=e.results[0][0].transcript.trim();
+    listening=false;
+    if(t){addMsg(t,'u');ask(t);}else setState('idle');
+  };
+  rec.onerror=()=>{setState('idle');listening=false;};
+  rec.onend=()=>{if(appState==='listening')setState('idle');listening=false;};
+}
+
+function toggleMic(){
+  if(appState==='thinking'||appState==='speaking') return;
+  if(!rec){addMsg('[Reconhecimento de voz indisponível neste browser]','a');return;}
+  if(listening){rec.stop();setState('idle');listening=false;return;}
+  if(window.speechSynthesis) window.speechSynthesis.cancel();
+  listening=true; setState('listening');
+  try{rec.start();}catch{setState('idle');listening=false;}
+}
+
+const mbtn=document.getElementById('mbtn');
+mbtn.addEventListener('click',toggleMic);
+mbtn.addEventListener('touchend',e=>{e.preventDefault();toggleMic();},{passive:false});
+
+/* ════════════════════════════════════
+   INIT
+════════════════════════════════════ */
+setState('idle');
+ping();
+setInterval(ping,30000);
+</script>
 </body>
 </html>
 """
+
 
 
 if __name__ == "__main__":

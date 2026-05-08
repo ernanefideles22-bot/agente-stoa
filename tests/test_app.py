@@ -86,43 +86,44 @@ class SafeStoaAppTests(unittest.TestCase):
         self.assertIn("any", icon_purposes)
         self.assertIn("maskable", icon_purposes)
 
-    def test_root_shell_registers_service_worker(self):
+    def test_root_shell_renders_stoa_interface(self):
         response = self.client.get("/")
         self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn('rel="manifest" href="/manifest.webmanifest"', html)
-        self.assertIn("navigator.serviceWorker.register('/sw.js')", html)
+        self.assertIn("<title>STOA</title>", html)
+        self.assertIn('lang="pt-BR"', html)
 
-    def test_root_shell_exposes_preview_controls(self):
+    def test_root_shell_contains_3d_canvas(self):
         response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn('id="previewPanel"', html)
-        self.assertIn('id="previewApplyBtn"', html)
-        self.assertIn('id="previewCancelBtn"', html)
-        self.assertIn("/api/pending-preview/", html)
-        self.assertIn("setPendingPreview(", html)
-        self.assertIn("clearPendingPreview(", html)
+        self.assertIn('id="gl"', html)
+        self.assertIn("three.min.js", html)
 
-    def test_root_shell_blocks_ambiguous_commands_while_preview_is_pending(self):
+    def test_root_shell_contains_mic_button(self):
         response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn("Existe um preview pendente. Use apply para executar ou cancel para descartar antes de enviar outro comando.", html)
-        self.assertIn("previewApplyBtn.addEventListener('click'", html)
-        self.assertIn("previewCancelBtn.addEventListener('click'", html)
-        self.assertIn("if (route.endpoint === '/api/command')", html)
+        self.assertIn('id="mbtn"', html)
+        self.assertIn('id="ring"', html)
+        self.assertIn('id="hint"', html)
 
-    def test_root_shell_persists_command_mode_settings_across_reload(self):
+    def test_root_shell_contains_status_pill_and_chat(self):
         response = self.client.get("/")
-        self.assertEqual(response.status_code, 200)
         html = response.text
-        self.assertIn("function persistCommandModeSettings()", html)
-        self.assertIn("function restoreCommandModeSettings()", html)
-        self.assertIn("sessionStorage.setItem('stoa_coworker_mode'", html)
-        self.assertIn("sessionStorage.setItem('stoa_autopilot_mode'", html)
-        self.assertIn("sessionStorage.setItem('stoa_super_mode'", html)
-        self.assertIn("restoreCommandModeSettings();", html)
+        self.assertIn('id="pill"', html)
+        self.assertIn('id="chat"', html)
+        self.assertIn('id="think"', html)
+
+    def test_root_shell_calls_correct_api_endpoints(self):
+        response = self.client.get("/")
+        html = response.text
+        self.assertIn("/api/health", html)
+        self.assertIn("/api/orchestrate", html)
+
+    def test_root_shell_uses_portuguese_speech_recognition(self):
+        response = self.client.get("/")
+        html = response.text
+        self.assertIn("pt-BR", html)
+        self.assertIn("SpeechRecognition", html)
 
     def test_service_worker_skips_authenticated_api_cache(self):
         response = self.client.get("/sw.js")
