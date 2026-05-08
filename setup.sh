@@ -68,8 +68,17 @@ fi
 # Converter CRLF → LF (sed não interpreta \r em regex; tr sim)
 tr -d '\r' < "$ENV_FILE" > "${ENV_FILE}.tmp" && mv "${ENV_FILE}.tmp" "$ENV_FILE"
 
-# Validar campos obrigatórios
-source "$ENV_FILE"
+# Carregar .env.safe sem passar pelo shell parser (evita quebra com |, ;, \, espaços)
+while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[[:space:]]*# ]] && continue   # ignora comentários
+    [[ -z "${line//[[:space:]]/}" ]] && continue   # ignora linhas vazias
+    key="${line%%=*}"
+    value="${line#*=}"
+    value="${value#\"}"; value="${value%\"}"        # remove aspas duplas
+    value="${value#\'}"; value="${value%\'}"        # remove aspas simples
+    export "$key=$value"
+done < "$ENV_FILE"
+
 [[ -n "${STOA_ACCESS_TOKEN:-}" ]] || error "STOA_ACCESS_TOKEN não definido em .env.safe"
 [[ -n "${ANTHROPIC_API_KEY:-}" ]]  || error "ANTHROPIC_API_KEY não definido em .env.safe"
 ok ".env.safe validado."
