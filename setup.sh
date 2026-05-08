@@ -65,6 +65,9 @@ if [[ ! -f "$ENV_FILE" ]]; then
     read -rp "Pressione ENTER após preencher o .env.safe para continuar..."
 fi
 
+# Converter CRLF → LF (evita "command not found" em arquivos editados no Windows)
+sed -i 's/\r//' "$ENV_FILE"
+
 # Validar campos obrigatórios
 source "$ENV_FILE"
 [[ -n "${STOA_ACCESS_TOKEN:-}" ]] || error "STOA_ACCESS_TOKEN não definido em .env.safe"
