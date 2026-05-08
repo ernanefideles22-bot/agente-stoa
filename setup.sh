@@ -65,8 +65,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
     read -rp "Pressione ENTER após preencher o .env.safe para continuar..."
 fi
 
-# Converter CRLF → LF (evita "command not found" em arquivos editados no Windows)
-sed -i 's/\r//' "$ENV_FILE"
+# Converter CRLF → LF (sed não interpreta \r em regex; tr sim)
+tr -d '\r' < "$ENV_FILE" > "${ENV_FILE}.tmp" && mv "${ENV_FILE}.tmp" "$ENV_FILE"
 
 # Validar campos obrigatórios
 source "$ENV_FILE"
