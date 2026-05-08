@@ -3493,7 +3493,8 @@ async def add_security_headers(request: Request, call_next):
 
 @app.get("/", response_class=HTMLResponse)
 async def root() -> str:
-    return FRONTEND_HTML
+    injection = f'<script>window.__STOA_TOKEN__="{config.ACCESS_TOKEN}";</script>'
+    return FRONTEND_HTML.replace("</head>", injection + "\n</head>", 1)
 
 
 @app.get("/manifest.webmanifest")

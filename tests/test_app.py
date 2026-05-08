@@ -93,6 +93,12 @@ class SafeStoaAppTests(unittest.TestCase):
         self.assertIn("<title>STOA</title>", html)
         self.assertIn('lang="pt-BR"', html)
 
+    def test_root_shell_injects_token_via_window_variable(self):
+        response = self.client.get("/")
+        html = response.text
+        self.assertIn('window.__STOA_TOKEN__="test-token"', html)
+        self.assertIn('window.__STOA_TOKEN__', html)
+
     def test_root_shell_contains_3d_canvas(self):
         response = self.client.get("/")
         html = response.text
